@@ -112,6 +112,7 @@ export type TypeNumber =
 
 export type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 export type Mode = "Numeric" | "Alphanumeric" | "Byte" | "Kanji";
+export type Multibyte = "default" | "UTF-8"
 export interface QRCode {
   addData(data: string, mode?: Mode): void;
   make(): void;
