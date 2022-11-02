@@ -1,7 +1,7 @@
 import qrTypes from "../constants/qrTypes";
 import drawTypes from "../constants/drawTypes";
 import errorCorrectionLevels from "../constants/errorCorrectionLevels";
-import { DotType, Options, TypeNumber, ErrorCorrectionLevel, Mode, DrawType, Gradient } from "../types";
+import { DotType, Options, TypeNumber, ErrorCorrectionLevel, Mode, DrawType, Gradient, Multibyte } from "../types";
 
 export interface RequiredOptions extends Options {
   type: DrawType;
@@ -13,6 +13,7 @@ export interface RequiredOptions extends Options {
     typeNumber: TypeNumber;
     mode?: Mode;
     errorCorrectionLevel: ErrorCorrectionLevel;
+    multibyte: Multibyte
   };
   imageOptions: {
     saveAsBlob: boolean;
@@ -41,7 +42,8 @@ const defaultOptions: RequiredOptions = {
   qrOptions: {
     typeNumber: qrTypes[0],
     mode: undefined,
-    errorCorrectionLevel: errorCorrectionLevels.Q
+    errorCorrectionLevel: errorCorrectionLevels.Q,
+    multibyte: 'default'
   },
   imageOptions: {
     saveAsBlob: false,
