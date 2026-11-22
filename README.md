@@ -122,10 +122,25 @@ fontWeight|string or number           |`'bold'`                            |
 
 <img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/art_examples.png" width="720" />
 
-Blend a picture into the code with `art`. Two modes:
+Blend a picture into the code with `art`. Three modes:
 
 - `halftone` (default): the picture is redrawn as fine pixels, with each QR module kept in the middle. Use `colored: true` to keep the picture's colors.
 - `colorize`: dots keep their shape (any `dotsOptions.type`) and are painted with a darkened copy of the picture, over a light copy of it.
+- `blend`: the picture fills the whole image, like an illustration. Dots are drawn only where the picture is not already
+  dark or light enough for the code; finders take a dark color from the picture and sit on a light plate.
+  Use `placement` to put the code in one part of a larger picture.
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/blend_examples.png" width="720" />
+
+```js
+const qrCode = new QRCodeStyling({
+    width: 760,
+    height: 300,
+    data: "https://example.com",
+    dotsOptions: { type: "dots" }, // round dots give round finders in blend mode
+    art: { image: "poster.jpg", mode: "blend", placement: { x: 510, y: 40, size: 220 } }
+});
+```
 
 ```js
 const qrCode = new QRCodeStyling({
@@ -144,11 +159,15 @@ QR art reads the picture's pixels, so it needs a canvas: it works as is in the b
 Property  |Type                              |Default Value|Description
 ----------|----------------------------------|-------------|------------------------------------------------------------
 image     |string                            |             |The picture (URL or data URL). Required
-mode      |string (`'halftone' 'colorize'`)  |`'halftone'` |How the picture is blended in
+mode      |string (`'halftone' 'colorize' 'blend'`)|`'halftone'` |How the picture is blended in
 colored   |boolean                           |`false`      |halftone: use the picture's colors instead of dots/background colors
 background|boolean                           |`true`       |colorize: show a light copy of the picture behind the dots
-contrast  |number (`0 - 1`)                  |`0.5` halftone, `0.7` colorize|Higher is easier to scan but shows less of the picture
+contrast  |number (`0 - 1`)                  |`0.5` halftone, `0.7` colorize, `0.6` blend|Higher is easier to scan but shows less of the picture
 crossOrigin|string                          |             |Overrides `imageOptions.crossOrigin` for the picture
+placement |object `{ x, y, size }`          |             |Put the code in this square (in pixels) instead of the middle; the margin is ignored. Mostly for `blend`
+
+Always check art codes with `verify()` below: a picture with large mid-grey areas or very small modules
+(under about 7 px) may need a higher `contrast`, a larger size or a higher error correction level.
 
 ### Checking that a code scans
 
@@ -229,7 +248,7 @@ Property|Type                                                                   
 --------|------------------------------------------------------------------------------|-------------|-------------------
 color   |string                                                                        |`'#000'`     |Color of QR dots
 gradient|object                                                                        |             |Gradient of QR dots
-type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded' 'diamond' 'small-square' 'vertical-lines' 'horizontal-lines'`)|`'square'`   |Style of QR dots. With the last four, corners and alignment patterns stay solid unless you set a corner type
+type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded' 'diamond' 'small-square' 'vertical-lines' 'horizontal-lines' 'fluid'`)|`'square'`   |Style of QR dots. With `diamond`, `small-square` and the lines, corners and alignment patterns stay solid unless you set a corner type. `fluid` joins neighbouring dots into soft strokes, with solid rounded corners
 
 `options.backgroundOptions` structure
 

@@ -8,6 +8,8 @@ import { RequiredOptions } from "../core/QROptions";
 import { ArtOptions, Canvas, FilterFunction, QRCode } from "../types";
 import { hasBrowserDom } from "../tools/svgDom";
 import getModuleRoles from "./functionModules";
+import { ROUND_DOT_TYPES } from "../tools/cornerTypes";
+import getQRArea, { QRArea } from "../tools/qrArea";
 
 type RGB = [number, number, number];
 
@@ -17,13 +19,7 @@ export interface ArtRect {
   width: number;
   height: number;
   color: string;
-}
-
-export interface QRArea {
-  count: number;
-  dotSize: number;
-  x: number;
-  y: number;
+  shape?: "rect" | "circle";
 }
 
 export interface HalftoneArt {
@@ -39,10 +35,20 @@ export interface ColorizeArt {
   background?: Canvas;
 }
 
-export type PreparedArt = HalftoneArt | ColorizeArt;
+export interface BlendArt {
+  mode: "blend";
+  /** Full-size canvas with the picture, drawn behind everything. */
+  picture: Canvas;
+  /** Light plates behind the finders, then the dots that correct the picture. */
+  rects: ArtRect[];
+  /** Dark color picked from the picture around each finder (top-left, top-right, bottom-left). */
+  finderColors: string[];
+}
+
+export type PreparedArt = HalftoneArt | ColorizeArt | BlendArt;
 
 /** Default contrast per mode: colorize keeps the dot shapes, so it needs more contrast to scan reliably. */
-export const DEFAULT_CONTRAST = { halftone: 0.5, colorize: 0.7 };
+export const DEFAULT_CONTRAST = { halftone: 0.5, colorize: 0.7, blend: 0.6 };
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
@@ -50,7 +56,7 @@ export const getContrast = (art: ArtOptions): number =>
   clamp01(
     typeof art.contrast === "number" && !isNaN(art.contrast)
       ? art.contrast
-      : DEFAULT_CONTRAST[art.mode === "colorize" ? "colorize" : "halftone"]
+      : DEFAULT_CONTRAST[art.mode === "colorize" || art.mode === "blend" ? art.mode : "halftone"]
   );
 
 /** Luminance limits for "dark" and "light" pixels at a given contrast. */
@@ -270,15 +276,101 @@ function prepareColorize(
   };
 }
 
-export function getQRArea(options: RequiredOptions, count: number): QRArea {
-  const minSize = Math.min(options.width, options.height) - options.margin * 2;
-  const dotSize = Math.floor(minSize / count);
-  return {
-    count,
-    dotSize,
-    x: Math.floor((options.width - count * dotSize) / 2),
-    y: Math.floor((options.height - count * dotSize) / 2)
+function prepareBlend(
+  options: RequiredOptions,
+  art: ArtOptions,
+  image: HTMLImageElement,
+  qr: QRCode,
+  area: QRArea,
+  filter: FilterFunction
+): BlendArt {
+  const { count, dotSize } = area;
+  const { canvas: picture, data } = readPixels(options, image, options.width, options.height);
+  const width = options.width;
+  const contrast = getContrast(art);
+  const limits = getLimits(contrast);
+  const strong = getLimits(Math.max(contrast, 0.8));
+  const role = getModuleRoles(count);
+  const shape = ROUND_DOT_TYPES.indexOf(options.dotsOptions.type) !== -1 ? "circle" : "rect";
+
+  const average = (x0: number, y0: number, size: number): RGB => {
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let n = 0;
+    const xStart = Math.max(0, Math.floor(x0));
+    const yStart = Math.max(0, Math.floor(y0));
+    const xEnd = Math.min(options.width, Math.ceil(x0 + size));
+    const yEnd = Math.min(options.height, Math.ceil(y0 + size));
+    for (let y = yStart; y < yEnd; y++) {
+      for (let x = xStart; x < xEnd; x++) {
+        const index = (y * width + x) * 4;
+        r += data[index];
+        g += data[index + 1];
+        b += data[index + 2];
+        n++;
+      }
+    }
+    return n ? [r / n, g / n, b / n] : [255, 255, 255];
   };
+
+  const rects: ArtRect[] = [];
+  const finderColors: string[] = [];
+  [
+    [0, 0],
+    [count - 8, 0],
+    [0, count - 8]
+  ].forEach(([column, row]) => {
+    const x = area.x + column * dotSize;
+    const y = area.y + row * dotSize;
+    const color = average(x, y, 8 * dotSize);
+    // The plate covers the finder, its separator and one module of quiet zone on the outer sides,
+    // so that the picture around the code cannot merge with the finder's dark ring.
+    const x0 = Math.max(0, x - dotSize);
+    const y0 = Math.max(0, y - dotSize);
+    const x1 = Math.min(options.width, x + 8 * dotSize + (column ? dotSize : 0));
+    const y1 = Math.min(options.height, y + 8 * dotSize + (row ? dotSize : 0));
+    rects.push({ x: x0, y: y0, width: x1 - x0, height: y1 - y0, color: css(toLight(color, strong.light)) });
+    finderColors.push(css(toDark(color, strong.dark)));
+  });
+
+  // Circles cover less than squares of the same width, so they are drawn a little larger.
+  const dot = Math.max(
+    1,
+    Math.min(dotSize, Math.round(dotSize * ((shape === "circle" ? 0.55 : 0.45) + contrast * 0.3)))
+  );
+  const offset = (dotSize - dot) / 2;
+
+  for (let i = 0; i < count; i++) {
+    for (let j = 0; j < count; j++) {
+      const moduleRole = role(i, j);
+      if (moduleRole === "finder" || !filter(i, j)) continue;
+      const x = area.x + i * dotSize;
+      const y = area.y + j * dotSize;
+      const color = average(x + dotSize / 3, y + dotSize / 3, dotSize / 3);
+      const lum = luminance(color);
+      const dark = qr.isDark(i, j);
+      const agrees = dark ? lum <= limits.dark : lum >= limits.light;
+      // A light module on a light picture needs nothing. A dark module on a dark picture still gets
+      // a deeper dot: readers treat flat dark areas as background, so the dot keeps some texture.
+      if (agrees && moduleRole === "data" && !dark) continue;
+      // Function patterns (timing, alignment, format/version) are drawn whole: the reader
+      // finds them by the exact ratio of their dark and light runs.
+      const full = moduleRole === "alignment";
+      rects.push({
+        x: full ? x : x + offset,
+        y: full ? y : y + offset,
+        width: full ? dotSize : dot,
+        height: full ? dotSize : dot,
+        shape: full ? "rect" : shape,
+        color: css(
+          dark ? toDark(color, agrees ? Math.min(lum, strong.dark) * 0.4 : strong.dark) : toLight(color, strong.light)
+        )
+      });
+    }
+  }
+
+  return { mode: "blend", picture, rects, finderColors };
 }
 
 export async function prepareArt(options: RequiredOptions, qr: QRCode, filter: FilterFunction): Promise<PreparedArt> {
@@ -288,7 +380,7 @@ export async function prepareArt(options: RequiredOptions, qr: QRCode, filter: F
   const image = await loadPicture(options, art);
   const area = getQRArea(options, qr.getModuleCount());
 
-  return art.mode === "colorize"
-    ? prepareColorize(options, art, image, area)
-    : planHalftone(options, art, image, qr, area, filter);
+  if (art.mode === "colorize") return prepareColorize(options, art, image, area);
+  if (art.mode === "blend") return prepareBlend(options, art, image, qr, area, filter);
+  return planHalftone(options, art, image, qr, area, filter);
 }

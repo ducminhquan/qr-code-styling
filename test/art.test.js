@@ -30,6 +30,18 @@ const variants = {
     art: { image: PICTURE, mode: "colorize" },
     cornersSquareOptions: { type: "extra-rounded", color: "#1d4ed8" },
     cornersDotOptions: { type: "dot", color: "#1d4ed8" }
+  },
+  blend: { art: { image: PICTURE, mode: "blend" } },
+  "blend, round dots": { art: { image: PICTURE, mode: "blend" }, dotsOptions: { type: "dots" } },
+  "blend, fluid dots, low contrast": {
+    art: { image: PICTURE, mode: "blend", contrast: 0.3 },
+    dotsOptions: { type: "fluid" }
+  },
+  "blend, placed in a wide picture": {
+    width: 600,
+    height: 400,
+    art: { image: PICTURE, mode: "blend", placement: { x: 300, y: 100, size: 240 } },
+    dotsOptions: { type: "dots" }
   }
 };
 
@@ -58,6 +70,54 @@ describe("QR art", () => {
     const withArt = await new QRCodeStyling({ ...base, nodeCanvas, art: { image: PICTURE } }).getRawData("png");
     const without = await new QRCodeStyling({ ...base, nodeCanvas }).getRawData("png");
     expect((await diffImages(withArt, without)).ratio).toBeGreaterThan(0.2);
+  });
+
+  it("blend: finders take their color from the picture unless a corner color is set", async () => {
+    const qrCode = new QRCodeStyling({ ...base, type: "svg", nodeCanvas, art: { image: PICTURE, mode: "blend" } });
+    const svg = (await qrCode.getRawData("svg")).toString();
+    const finderFills = svg.match(/clip-path-corners-square-color-[^"]*'\)" fill="[^"]*"/g) || [];
+    expect(finderFills).toHaveLength(3);
+    finderFills.forEach((fill) => expect(fill).toMatch(/fill="rgb\(/));
+    const colored = new QRCodeStyling({
+      ...base,
+      type: "svg",
+      nodeCanvas,
+      art: { image: PICTURE, mode: "blend" },
+      cornersSquareOptions: { color: "#1d4ed8" }
+    });
+    expect((await colored.getRawData("svg")).toString()).toContain("#1d4ed8");
+  });
+
+  it("blend: keeps the picture outside the code with placement", async () => {
+    const options = { ...base, width: 600, height: 400, nodeCanvas };
+    const placed = new QRCodeStyling({
+      ...options,
+      art: { image: PICTURE, mode: "blend", placement: { x: 300, y: 100, size: 240 } }
+    });
+    const canvas = nodeCanvas.createCanvas(600, 400);
+    const context = canvas.getContext("2d");
+    context.drawImage(await nodeCanvas.loadImage(await placed.getRawData("png")), 0, 0);
+    const picture = nodeCanvas.createCanvas(600, 400);
+    const pictureContext = picture.getContext("2d");
+    const image = await nodeCanvas.loadImage(PICTURE);
+    const scale = Math.max(600 / image.width, 400 / image.height);
+    pictureContext.drawImage(
+      image,
+      (image.width - 600 / scale) / 2,
+      (image.height - 400 / scale) / 2,
+      600 / scale,
+      400 / scale,
+      0,
+      0,
+      600,
+      400
+    );
+    // The left part of the picture, far from the code, is untouched.
+    const a = context.getImageData(0, 0, 250, 400).data;
+    const b = pictureContext.getImageData(0, 0, 250, 400).data;
+    let different = 0;
+    for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) > 8) different++;
+    expect(different / (a.length / 4)).toBeLessThan(0.01);
   });
 
   it("can be removed again with update()", async () => {

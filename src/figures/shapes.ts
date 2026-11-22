@@ -136,3 +136,44 @@ export const roundedRing = (x: number, y: number, size: number): Shape => {
 };
 
 export const roundedSquare = (x: number, y: number, size: number): Shape => roundedRect(x, y, size, size, size * 0.25);
+
+/**
+ * "fluid" dot: a rounded square that flows into its dark neighbours, so runs of modules read as
+ * soft connected strokes and a lone module is a circle. Arms stay inside the module's own cell,
+ * so neighbouring shapes touch but never overlap.
+ */
+export const fluid = (
+  x: number,
+  y: number,
+  size: number,
+  neighbors: { left: boolean; right: boolean; top: boolean; bottom: boolean }
+): Shape => {
+  const { left, right, top, bottom } = neighbors;
+  const inset = size * 0.1;
+  const x0 = x + inset;
+  const x1 = x + size - inset;
+  const y0 = y + inset;
+  const y1 = y + size - inset;
+  const r = (size - 2 * inset) / 2;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const roundTL = !left && !top;
+  const roundTR = !top && !right;
+  const roundBR = !right && !bottom;
+  const roundBL = !bottom && !left;
+
+  const shape: Shape = [{ op: "M", x: roundTL ? cx : x0, y: y0 }];
+  if (top) shape.push({ op: "L", x: x0, y }, { op: "L", x: x1, y }, { op: "L", x: x1, y: y0 });
+  if (roundTR) shape.push({ op: "A", cx, cy, r, start: -Math.PI / 2, end: 0 });
+  else shape.push({ op: "L", x: x1, y: y0 });
+  if (right) shape.push({ op: "L", x: x + size, y: y0 }, { op: "L", x: x + size, y: y1 }, { op: "L", x: x1, y: y1 });
+  if (roundBR) shape.push({ op: "A", cx, cy, r, start: 0, end: Math.PI / 2 });
+  else shape.push({ op: "L", x: x1, y: y1 });
+  if (bottom) shape.push({ op: "L", x: x1, y: y + size }, { op: "L", x: x0, y: y + size }, { op: "L", x: x0, y: y1 });
+  if (roundBL) shape.push({ op: "A", cx, cy, r, start: Math.PI / 2, end: Math.PI });
+  else shape.push({ op: "L", x: x0, y: y1 });
+  if (left) shape.push({ op: "L", x, y: y1 }, { op: "L", x, y: y0 }, { op: "L", x: x0, y: y0 });
+  if (roundTL) shape.push({ op: "A", cx, cy, r, start: Math.PI, end: (3 * Math.PI) / 2 });
+  shape.push({ op: "Z" });
+  return shape;
+};

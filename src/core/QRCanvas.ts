@@ -4,6 +4,7 @@ import QRDot from "../figures/dot/canvas/QRDot";
 import QRCornerSquare from "../figures/cornerSquare/canvas/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/canvas/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
+import getQRArea from "../tools/qrArea";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
 import { roundedRect, toCanvas } from "../figures/shapes";
@@ -39,6 +40,8 @@ export default class QRCanvas {
   _image?: HTMLImageElement;
   /** Fill used for the dots instead of their color (QR art "colorize"). */
   _dotsFill?: CanvasPattern;
+  /** Per-finder colors used when corners have no color of their own (QR art "blend"). */
+  _finderColors?: string[];
 
   //TODO don't pass all options to this class
   constructor(options: RequiredOptions) {
@@ -131,8 +134,7 @@ export default class QRCanvas {
       return this._drawFramed(qr);
     }
     const count = qr.getModuleCount();
-    const minSize = Math.min(this._options.width, this._options.height) - this._options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
+    const { dotSize } = getQRArea(this._options, count);
     let drawImageSize = {
       hideXDots: 0,
       hideYDots: 0,
@@ -188,7 +190,12 @@ export default class QRCanvas {
 
     this.clear();
     this.drawBackground();
-    if (art?.mode === "halftone") {
+    if (art?.mode === "blend") {
+      (this.context as CanvasRenderingContext2D).drawImage(art.picture as unknown as CanvasImageSource, 0, 0);
+      this._drawArtRects(art.rects);
+      this.drawDots(() => false);
+      this._finderColors = art.finderColors;
+    } else if (art?.mode === "halftone") {
       this._drawArtRects(art.rects);
       // No regular dots, but set up the dots color so corners without their own color use it.
       this.drawDots(() => false);
@@ -202,6 +209,7 @@ export default class QRCanvas {
       this._dotsFill = undefined;
     }
     this.drawCorners();
+    this._finderColors = undefined;
 
     if (this._options.image) {
       this.drawImage({ width: drawImageSize.width, height: drawImageSize.height, count, dotSize });
@@ -254,10 +262,7 @@ export default class QRCanvas {
       throw "The canvas is too small.";
     }
 
-    const minSize = Math.min(options.width, options.height) - options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
-    const xBeginning = Math.floor((options.width - count * dotSize) / 2);
-    const yBeginning = Math.floor((options.height - count * dotSize) / 2);
+    const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
     const typeDot = new QRDot({ context: canvasContext, type: options.dotsOptions.type });
     const squareDot = new QRDot({ context: canvasContext, type: "square" });
     const solidAlignment = needsSolidAlignment(options.dotsOptions.type);
@@ -317,9 +322,15 @@ export default class QRCanvas {
   _drawArtRects(rects: ArtRect[]): void {
     const context = this.context;
     if (!context) return;
-    rects.forEach(({ x, y, width, height, color }) => {
+    rects.forEach(({ x, y, width, height, color, shape }) => {
       context.fillStyle = color;
-      context.fillRect(x, y, width, height);
+      if (shape === "circle") {
+        context.beginPath();
+        context.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
+        context.fill();
+      } else {
+        context.fillRect(x, y, width, height);
+      }
     });
   }
 
@@ -337,19 +348,16 @@ export default class QRCanvas {
     const options = this._options;
 
     const count = this._qr.getModuleCount();
-    const minSize = Math.min(options.width, options.height) - options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
+    const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
     const cornersSquareSize = dotSize * 7;
     const cornersDotSize = dotSize * 3;
     const cornerTypes = getCornerTypes(options);
-    const xBeginning = Math.floor((options.width - count * dotSize) / 2);
-    const yBeginning = Math.floor((options.height - count * dotSize) / 2);
 
     [
       [0, 0, 0],
       [1, 0, Math.PI / 2],
       [0, 1, -Math.PI / 2]
-    ].forEach(([column, row, rotation]) => {
+    ].forEach(([column, row, rotation], index) => {
       if (filter && !filter(column, row)) {
         return;
       }
@@ -401,6 +409,8 @@ export default class QRCanvas {
         canvasContext.fillStyle = canvasContext.strokeStyle = gradient;
       } else if (options.cornersSquareOptions?.color) {
         canvasContext.fillStyle = canvasContext.strokeStyle = options.cornersSquareOptions.color;
+      } else if (this._finderColors) {
+        canvasContext.fillStyle = canvasContext.strokeStyle = this._finderColors[index];
       }
 
       canvasContext.fill("evenodd");
@@ -449,6 +459,8 @@ export default class QRCanvas {
         canvasContext.fillStyle = canvasContext.strokeStyle = gradient;
       } else if (options.cornersDotOptions?.color) {
         canvasContext.fillStyle = canvasContext.strokeStyle = options.cornersDotOptions.color;
+      } else if (this._finderColors) {
+        canvasContext.fillStyle = canvasContext.strokeStyle = this._finderColors[index];
       }
 
       canvasContext.fill("evenodd");
@@ -514,8 +526,7 @@ export default class QRCanvas {
     }
 
     const options = this._options;
-    const xBeginning = Math.floor((options.width - count * dotSize) / 2);
-    const yBeginning = Math.floor((options.height - count * dotSize) / 2);
+    const { x: xBeginning, y: yBeginning } = getQRArea(options, count);
     const dx = xBeginning + options.imageOptions.margin + (count * dotSize - width) / 2;
     const dy = yBeginning + options.imageOptions.margin + (count * dotSize - height) / 2;
     const dw = width - options.imageOptions.margin * 2;

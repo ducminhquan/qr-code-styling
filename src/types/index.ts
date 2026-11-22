@@ -13,7 +13,8 @@ export type DotType =
   | "diamond"
   | "small-square"
   | "vertical-lines"
-  | "horizontal-lines";
+  | "horizontal-lines"
+  | "fluid";
 export type CornerDotType = "dot" | "square" | "rounded";
 export type CornerSquareType = "dot" | "square" | "extra-rounded" | "rounded";
 export type Extension = "svg" | "png" | "jpeg" | "webp";
@@ -143,7 +144,7 @@ export interface ResvgConstructor {
   ): { render(): { asPng(): Uint8Array; pixels: Uint8Array; width: number; height: number } };
 }
 
-export type ArtMode = "halftone" | "colorize";
+export type ArtMode = "halftone" | "colorize" | "blend";
 
 export interface ArtOptions {
   /** The picture to blend into the QR code (URL or data URL). */
@@ -151,15 +152,22 @@ export interface ArtOptions {
   /**
    * "halftone": the picture is redrawn as fine black/white (or colored) pixels, with the QR modules in the middle.
    * "colorize": the dots keep their shape and are painted with a darkened copy of the picture.
+   * "blend": the picture fills the whole image; dots are drawn only where the picture is not already
+   * dark or light enough for the code, so it reads as an illustration.
    */
   mode?: ArtMode;
   /** halftone only: use the picture's own colors instead of dotsOptions/backgroundOptions colors. */
   colored?: boolean;
   /** colorize only: also show a light copy of the picture behind the dots. Default true. */
   background?: boolean;
-  /** 0 to 1. Higher keeps dark and light further apart: easier to scan, less of the picture. Default 0.5 (halftone), 0.7 (colorize). */
+  /** 0 to 1. Higher keeps dark and light further apart: easier to scan, less of the picture. Default 0.5 (halftone), 0.7 (colorize), 0.6 (blend). */
   contrast?: number;
   crossOrigin?: string;
+  /**
+   * Put the code in a square of the picture instead of the middle, in pixels of the output:
+   * { x, y, size }. Mostly for "blend", where the picture fills the whole image. The margin is ignored.
+   */
+  placement?: { x: number; y: number; size: number };
 }
 
 /** Same signature as jsQR: (rgba, width, height) => { data } | null. */
