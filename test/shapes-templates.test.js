@@ -11,7 +11,12 @@ import { getShapeLayout } from "../src/tools/codeShape";
 
 const readSVG = async (options) => {
   const svg = (await new QRCodeStyling({ ...options, type: "svg" }).getRawData("svg")).toString();
-  const image = new Resvg(QRCodeStyling._normalizeSVGForResvg(svg), { background: "white" }).render();
+  // Labels are drawn without fonts: text is outside the code, and glyphs from whatever fonts the machine has
+  // can look like finder patterns to jsQR, which (unlike phone scanners) searches the whole image.
+  const image = new Resvg(QRCodeStyling._normalizeSVGForResvg(svg), {
+    background: "white",
+    font: { loadSystemFonts: false }
+  }).render();
   return { svg, text: jsQR(new Uint8ClampedArray(image.pixels), image.width, image.height)?.data };
 };
 
