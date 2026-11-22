@@ -17,7 +17,7 @@ payload builders, `share()`, plugins, and React and Vue wrappers. Try them in th
 [playground](https://ducminhquan.github.io/qr-code-styling/).
 
 ### Release
-- Published from GitHub Actions when a GitHub release is created, with npm provenance.
+- Published from GitHub Actions with npm Trusted Publishing (no token) when a GitHub release is created, with provenance.
 
 ## 1.14.0
 
