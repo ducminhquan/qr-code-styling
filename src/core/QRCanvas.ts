@@ -4,6 +4,10 @@ import QRDot from "../figures/dot/canvas/QRDot";
 import QRCornerSquare from "../figures/cornerSquare/canvas/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/canvas/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
+import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
+import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
+import { roundedRect, toCanvas } from "../figures/shapes";
+import getModuleRoles from "../art/functionModules";
 import { prepareArt, PreparedArt, ArtRect } from "../art/art";
 import gradientTypes from "../constants/gradientTypes";
 import { QRCode, Gradient, FilterFunction, Canvas } from "../types";
@@ -72,7 +76,60 @@ export default class QRCanvas {
     }
   }
 
+  async _drawFramed(qr: QRCode): Promise<void> {
+    const layout = getFrameLayout(this._options);
+    const inner = new QRCanvas(innerOptions(this._options, layout.qr.size));
+    await inner.drawQR(qr);
+
+    const context = this.context as CanvasRenderingContext2D;
+    this.clear();
+    if (layout.frame) {
+      const { thickness, radius, color } = layout.frame;
+      context.beginPath();
+      toCanvas(context, roundedRect(0, 0, layout.width, layout.height, radius));
+      context.fillStyle = color;
+      context.fill();
+      context.save();
+      context.beginPath();
+      toCanvas(
+        context,
+        roundedRect(
+          thickness,
+          thickness,
+          layout.width - 2 * thickness,
+          layout.height - 2 * thickness,
+          Math.max(0, radius - thickness)
+        )
+      );
+      context.clip();
+      this.drawBackground();
+      context.restore();
+      if (layout.label) {
+        const { x, y, width, height } = layout.label.band;
+        context.fillStyle = color;
+        context.fillRect(x, y, width, height);
+      }
+    } else {
+      this.drawBackground();
+    }
+
+    context.drawImage(inner.getCanvas() as unknown as CanvasImageSource, layout.qr.x, layout.qr.y);
+
+    if (layout.label) {
+      const { band, font, color, text } = layout.label;
+      context.font = font;
+      context.fillStyle = color;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(text, band.x + band.width / 2, band.y + band.height / 2);
+    }
+  }
+
   async drawQR(qr: QRCode): Promise<void> {
+    if (hasFrame(this._options)) {
+      this._qr = qr;
+      return this._drawFramed(qr);
+    }
     const count = qr.getModuleCount();
     const minSize = Math.min(this._options.width, this._options.height) - this._options.margin * 2;
     const dotSize = Math.floor(minSize / count);
@@ -201,7 +258,10 @@ export default class QRCanvas {
     const dotSize = Math.floor(minSize / count);
     const xBeginning = Math.floor((options.width - count * dotSize) / 2);
     const yBeginning = Math.floor((options.height - count * dotSize) / 2);
-    const dot = new QRDot({ context: canvasContext, type: options.dotsOptions.type });
+    const typeDot = new QRDot({ context: canvasContext, type: options.dotsOptions.type });
+    const squareDot = new QRDot({ context: canvasContext, type: "square" });
+    const solidAlignment = needsSolidAlignment(options.dotsOptions.type);
+    const role = solidAlignment ? getModuleRoles(count) : undefined;
 
     canvasContext.beginPath();
 
@@ -213,6 +273,7 @@ export default class QRCanvas {
         if (!this._qr.isDark(i, j)) {
           continue;
         }
+        const dot = role && role(i, j) === "alignment" ? squareDot : typeDot;
         dot.draw(
           xBeginning + i * dotSize,
           yBeginning + j * dotSize,
@@ -280,6 +341,7 @@ export default class QRCanvas {
     const dotSize = Math.floor(minSize / count);
     const cornersSquareSize = dotSize * 7;
     const cornersDotSize = dotSize * 3;
+    const cornerTypes = getCornerTypes(options);
     const xBeginning = Math.floor((options.width - count * dotSize) / 2);
     const yBeginning = Math.floor((options.height - count * dotSize) / 2);
 
@@ -295,8 +357,8 @@ export default class QRCanvas {
       const x = xBeginning + column * dotSize * (count - 7);
       const y = yBeginning + row * dotSize * (count - 7);
 
-      if (options.cornersSquareOptions?.type) {
-        const cornersSquare = new QRCornerSquare({ context: canvasContext, type: options.cornersSquareOptions?.type });
+      if (cornerTypes.square) {
+        const cornersSquare = new QRCornerSquare({ context: canvasContext, type: cornerTypes.square });
 
         canvasContext.beginPath();
         cornersSquare.draw(x, y, cornersSquareSize, rotation);
@@ -343,8 +405,8 @@ export default class QRCanvas {
 
       canvasContext.fill("evenodd");
 
-      if (options.cornersDotOptions?.type) {
-        const cornersDot = new QRCornerDot({ context: canvasContext, type: options.cornersDotOptions?.type });
+      if (cornerTypes.dot) {
+        const cornersDot = new QRCornerDot({ context: canvasContext, type: cornerTypes.dot });
 
         canvasContext.beginPath();
         cornersDot.draw(x + dotSize * 2, y + dotSize * 2, cornersDotSize, rotation);
@@ -458,6 +520,14 @@ export default class QRCanvas {
     const dy = yBeginning + options.imageOptions.margin + (count * dotSize - height) / 2;
     const dw = width - options.imageOptions.margin * 2;
     const dh = height - options.imageOptions.margin * 2;
+
+    if (options.imageOptions.backgroundColor) {
+      const plate = getLogoPlate(options, dx, dy, width, height);
+      canvasContext.beginPath();
+      toCanvas(canvasContext, roundedRect(plate.x, plate.y, plate.width, plate.height, plate.radius));
+      canvasContext.fillStyle = options.imageOptions.backgroundColor;
+      canvasContext.fill();
+    }
 
     canvasContext.drawImage(this._image, dx, dy, dw < 0 ? 0 : dw, dh < 0 ? 0 : dh);
   }

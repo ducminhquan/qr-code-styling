@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.9.0
+
+More styles, frames and labels. Existing options render exactly as before.
+
+### Added
+- Dot types `diamond`, `small-square`, `vertical-lines` and `horizontal-lines`. With these, finder and alignment patterns stay solid unless a corner type is set, so the code keeps scanning.
+- Corner types `rounded` for `cornersSquareOptions` and `cornersDotOptions`.
+- `frameOptions`: a border with optional rounded corners around the code.
+- `labelOptions`: a line of text (Unicode, including Vietnamese) above or below the code, on the frame band or on its own.
+- `imageOptions.backgroundColor` and `imageOptions.backgroundRadius`: a plate behind the logo.
+- The built-in SVG DOM supports text, so labels work on Node without jsdom.
+
 ## 1.8.0
 
 QR art and scan checking. Without the new options, output is unchanged.

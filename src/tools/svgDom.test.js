@@ -13,6 +13,10 @@ const build = (win) => {
   svg.appendChild(defs);
   const old = win.document.createElementNS(NS, "g");
   svg.appendChild(old);
+  const text = win.document.createElementNS(NS, "text");
+  text.setAttribute("x", "5");
+  text.textContent = "Quét mã <ngay> & nhận ưu đãi";
+  svg.appendChild(text);
   const replacement = old.cloneNode(false);
   replacement.setAttribute("x", "1");
   svg.replaceChild(replacement, old);

@@ -185,7 +185,8 @@ function planHalftone(
 
   for (let i = 0; i < count; i++) {
     for (let j = 0; j < count; j++) {
-      const moduleRole = role(i, j);
+      const found = role(i, j);
+      const moduleRole = found === "alignment" ? "function" : found;
       if (moduleRole === "finder" || !filter(i, j)) continue;
       const dark = qr.isDark(i, j);
 

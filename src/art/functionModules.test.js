@@ -14,13 +14,14 @@ describe("getModuleRoles", () => {
     expect(role(count - 1, 7)).toBe("finder");
     // Timing pattern alternates dark/light and is a function pattern.
     for (let i = 8; i < count - 8; i++) {
-      expect(role(6, i)).toBe("function");
+      // Alignment patterns on row 6 overlap the timing pattern.
+      expect(["function", "alignment"]).toContain(role(6, i));
       expect(qr.isDark(6, i)).toBe(i % 2 === 0);
     }
     if (version >= 2) {
       // The last alignment pattern centre is dark and surrounded by a light ring.
       const c = count - 7;
-      expect(role(c, c)).toBe("function");
+      expect(role(c, c)).toBe("alignment");
       expect(qr.isDark(c, c)).toBe(true);
       expect(qr.isDark(c - 1, c)).toBe(false);
       expect(qr.isDark(c - 2, c)).toBe(true);

@@ -33,6 +33,16 @@ export class VirtualSVGElement {
   parentNode: VirtualSVGElement | null = null;
   childNodes: VirtualSVGElement[] = [];
   private _attributes = new Map<string, string>();
+  private _text = "";
+
+  get textContent(): string {
+    return this._text + this.childNodes.map((child) => child.textContent).join("");
+  }
+
+  set textContent(value: string) {
+    this.childNodes = [];
+    this._text = String(value);
+  }
 
   constructor(tagName: string) {
     this.tagName = tagName;
@@ -83,6 +93,7 @@ export class VirtualSVGElement {
   cloneNode(deep = false): VirtualSVGElement {
     const clone = new VirtualSVGElement(this.tagName);
     this._attributes.forEach((value, name) => clone.setAttribute(name, value));
+    if (deep) clone._text = this._text;
     if (deep) this.childNodes.forEach((child) => clone.appendChild(child.cloneNode(true)));
     return clone;
   }
@@ -93,8 +104,9 @@ export class VirtualSVGElement {
     this._attributes.forEach((value, name) => {
       markup += ` ${name}="${escapeAttribute(value)}"`;
     });
-    if (!this.childNodes.length) return `${markup}/>`;
+    if (!this.childNodes.length && !this._text) return `${markup}/>`;
     markup += ">";
+    markup += this._text.replace(/[&<>]/g, (char) => (char === "&" ? "&amp;" : char === "<" ? "&lt;" : "&gt;"));
     for (const child of this.childNodes) markup += child.serialize(false);
     return `${markup}</${this.tagName}>`;
   }

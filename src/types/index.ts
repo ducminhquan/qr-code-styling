@@ -3,9 +3,19 @@ export interface UnknownObject {
   [key: string]: any;
 }
 
-export type DotType = "dots" | "rounded" | "classy" | "classy-rounded" | "square" | "extra-rounded";
-export type CornerDotType = "dot" | "square";
-export type CornerSquareType = "dot" | "square" | "extra-rounded";
+export type DotType =
+  | "dots"
+  | "rounded"
+  | "classy"
+  | "classy-rounded"
+  | "square"
+  | "extra-rounded"
+  | "diamond"
+  | "small-square"
+  | "vertical-lines"
+  | "horizontal-lines";
+export type CornerDotType = "dot" | "square" | "rounded";
+export type CornerSquareType = "dot" | "square" | "extra-rounded" | "rounded";
 export type Extension = "svg" | "png" | "jpeg" | "webp";
 export type GradientType = "radial" | "linear";
 export type DrawType = "canvas" | "svg";
@@ -176,6 +186,28 @@ export interface VerifyResult {
   attempts: number;
 }
 
+export interface FrameOptions {
+  /** Frame and label band color. Default "#000". */
+  color?: string;
+  /** Border thickness in px. Default 4% of the size. */
+  width?: number;
+  /** Outer corner radius in px. Default 0. */
+  radius?: number;
+  /** Space between the frame and the QR code in px. Default 4% of the size. */
+  padding?: number;
+}
+
+export interface LabelOptions {
+  text: string;
+  position?: "top" | "bottom";
+  /** Default white on a frame, otherwise the dots color. */
+  color?: string;
+  /** In px. Default 7% of the size. */
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string | number;
+}
+
 export type Options = {
   type?: DrawType;
   width?: number;
@@ -192,6 +224,10 @@ export type Options = {
   resvg?: ResvgConstructor;
   /** Blend a picture into the QR code. Needs a canvas (browser, or nodeCanvas on Node). */
   art?: ArtOptions;
+  /** A border around the code. The code shrinks to fit inside width x height. */
+  frameOptions?: FrameOptions;
+  /** A line of text above or below the code, such as "Scan to order". */
+  labelOptions?: LabelOptions;
   qrOptions?: {
     typeNumber?: TypeNumber;
     mode?: Mode;
@@ -203,6 +239,10 @@ export type Options = {
     imageSize?: number;
     crossOrigin?: string;
     margin?: number;
+    /** Plate drawn behind the logo, e.g. "#ffffff". */
+    backgroundColor?: string;
+    /** Corner radius of the plate, 0 (square) to 0.5 (round). Default 0.2. */
+    backgroundRadius?: number;
   };
   dotsOptions?: {
     type?: DotType;

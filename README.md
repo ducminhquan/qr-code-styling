@@ -31,7 +31,7 @@ npm install qr-code-styling-node
 <head>
     <meta charset="UTF-8">
     <title>QR Code Styling</title>
-    <script type="text/javascript" src="https://unpkg.com/qr-code-styling-node@1.8.0/lib/qr-code-styling.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/qr-code-styling-node@1.9.0/lib/qr-code-styling.js"></script>
 </head>
 <body>
 <div id="canvas"></div>
@@ -76,6 +76,47 @@ qrCode.append(document.getElementById("canvas"));
 The package ships an ES module build (`import`), a CommonJS/UMD build (`require` and `<script>`) and TypeScript types.
 
 ---
+
+### More styles, frames and labels
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/style_examples.png" width="720" />
+
+New dot types `diamond`, `small-square`, `vertical-lines` and `horizontal-lines`, and a `rounded` type for both corner
+options. A frame, a label and a plate behind the logo:
+
+```js
+const qrCode = new QRCodeStyling({
+    data: "https://example.com",
+    dotsOptions: { type: "rounded", color: "#1d4ed8" },
+    cornersSquareOptions: { type: "rounded" },
+    frameOptions: { color: "#1d4ed8", radius: 24 },
+    labelOptions: { text: "SCAN ME" },
+    image: "https://example.com/logo.svg",
+    imageOptions: { backgroundColor: "#ffffff", backgroundRadius: 0.5 }
+});
+```
+
+The frame and label are drawn inside `width` x `height`; the code shrinks to fit.
+
+`frameOptions` structure
+
+Property|Type  |Default Value      |Description
+--------|------|-------------------|--------------------------------------------
+color   |string|`'#000'`           |Frame and label band color
+width   |number|4% of the size     |Border thickness in px
+radius  |number|`0`                |Outer corner radius in px
+padding |number|4% of the size     |Space between the frame and the code in px
+
+`labelOptions` structure
+
+Property  |Type                       |Default Value                       |Description
+----------|---------------------------|------------------------------------|-----------------------------
+text      |string                     |                                    |The text. Required
+position  |string (`'top' 'bottom'`) |`'bottom'`                          |Where the label goes
+color     |string                     |white on a frame, else the dots color|Text color
+fontSize  |number                     |7% of the size                      |In px
+fontFamily|string                     |`'Helvetica, Arial, sans-serif'`    |
+fontWeight|string or number           |`'bold'`                            |
 
 ### QR art
 
@@ -157,6 +198,8 @@ nodeCanvas             |node-canvas              |             |Node only, optio
 jsdom                  |jsdom                    |             |Node only, optional. Not needed for svg any more; still accepted for backward compatibility
 resvg                  |`Resvg` from `@resvg/resvg-js`|        |Node only, optional. Produces png without node-canvas, see the Node section below
 art                    |object                   |             |Blend a picture into the code, see "QR art" above
+frameOptions           |object                   |             |Border around the code, see "Frames and labels" above
+labelOptions           |object                   |             |Text above or below the code, see "Frames and labels" above
 
 `options.qrOptions` structure
 
@@ -175,6 +218,8 @@ imageSize         |number                                 |`0.4`        |Coeffic
 margin            |number                                 |`0`          |Margin of the image in px
 crossOrigin       |string(`'anonymous' 'use-credentials'`)|             |Set "anonymous" if you want to download QR code from other origins.
 saveAsBlob        |boolean                                |`false`      |Saves image as base64 blob in svg type, see bellow
+backgroundColor   |string                                 |             |Draws a plate of this color behind the image
+backgroundRadius  |number (`0 - 0.5`)                     |`0.2`        |Corner radius of the plate, relative to its size. `0.5` is round
 
 When QR type is svg, the image may not load in certain applications as it is saved as a url, and some svg applications will not render url images for security reasons. Setting `saveAsBlob` to true will instead save the image as a blob, allowing it to render correctly in more places, but will also increase the file size.
 
@@ -184,7 +229,7 @@ Property|Type                                                                   
 --------|------------------------------------------------------------------------------|-------------|-------------------
 color   |string                                                                        |`'#000'`     |Color of QR dots
 gradient|object                                                                        |             |Gradient of QR dots
-type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded'`)|`'square'`   |Style of QR dots
+type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded' 'diamond' 'small-square' 'vertical-lines' 'horizontal-lines'`)|`'square'`   |Style of QR dots. With the last four, corners and alignment patterns stay solid unless you set a corner type
 
 `options.backgroundOptions` structure
 
@@ -199,7 +244,7 @@ Property|Type                                     |Default Value|Description
 --------|-----------------------------------------|-------------|-----------------
 color   |string                                   |             |Color of Corners Square
 gradient|object                                   |             |Gradient of Corners Square
-type    |string (`'dot' 'square' 'extra-rounded'`)|             |Style of Corners Square
+type    |string (`'dot' 'square' 'extra-rounded' 'rounded'`)|             |Style of Corners Square
 
 `options.cornersDotOptions` structure
 
@@ -207,7 +252,7 @@ Property|Type                     |Default Value|Description
 --------|-------------------------|-------------|-----------------
 color   |string                   |             |Color of Corners Dot
 gradient|object                   |             |Gradient of Corners Dot
-type    |string (`'dot' 'square'`)|             |Style of Corners Dot
+type    |string (`'dot' 'square' 'rounded'`)|             |Style of Corners Dot
 
 Gradient structure
 

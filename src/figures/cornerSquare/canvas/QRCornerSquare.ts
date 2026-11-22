@@ -1,4 +1,5 @@
 import cornerSquareTypes from "../../../constants/cornerSquareTypes";
+import { roundedRing, toCanvas } from "../../shapes";
 import { CornerSquareType, RotateFigureArgsCanvas, BasicFigureDrawArgsCanvas, DrawArgsCanvas } from "../../../types";
 
 export default class QRCornerSquare {
@@ -21,6 +22,9 @@ export default class QRCornerSquare {
         break;
       case cornerSquareTypes.extraRounded:
         drawFunction = this._drawExtraRounded;
+        break;
+      case cornerSquareTypes.rounded:
+        drawFunction = (args: DrawArgsCanvas) => toCanvas(context, roundedRing(args.x, args.y, args.size));
         break;
       case cornerSquareTypes.dot:
       default:

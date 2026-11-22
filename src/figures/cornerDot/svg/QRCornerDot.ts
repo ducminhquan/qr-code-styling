@@ -1,4 +1,5 @@
 import cornerDotTypes from "../../../constants/cornerDotTypes";
+import { roundedSquare, toSVGPath } from "../../shapes";
 import { CornerDotType, RotateFigureArgs, BasicFigureDrawArgs, DrawArgs, Window } from "../../../types";
 
 export default class QRCornerDot {
@@ -20,6 +21,12 @@ export default class QRCornerDot {
     switch (type) {
       case cornerDotTypes.square:
         drawFunction = this._drawSquare;
+        break;
+      case cornerDotTypes.rounded:
+        drawFunction = (args: DrawArgs) => {
+          this._element = this._window.document.createElementNS("http://www.w3.org/2000/svg", "path");
+          this._element.setAttribute("d", toSVGPath(roundedSquare(args.x, args.y, args.size)));
+        };
         break;
       case cornerDotTypes.dot:
       default:
