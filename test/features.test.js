@@ -159,6 +159,21 @@ describe("payload builders", () => {
 });
 
 describe("share()", () => {
+  beforeEach(() => {
+    // Node 18 has no global File (browsers and Node 20+ do).
+    if (typeof File === "undefined") {
+      vi.stubGlobal(
+        "File",
+        class extends Blob {
+          constructor(parts, name, options) {
+            super(parts, options);
+            this.name = name;
+          }
+        }
+      );
+    }
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });
