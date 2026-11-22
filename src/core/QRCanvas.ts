@@ -110,25 +110,26 @@ export default class QRCanvas {
       context.clip();
       this.drawBackground();
       context.restore();
-      if (layout.label) {
-        const { x, y, width, height } = layout.label.band;
-        context.fillStyle = color;
-        context.fillRect(x, y, width, height);
-      }
     } else {
       this.drawBackground();
     }
+    layout.labels.forEach(({ band, fill }) => {
+      if (!fill) return;
+      context.fillStyle = fill;
+      context.fillRect(band.x, band.y, band.width, band.height);
+    });
 
     context.drawImage(inner.getCanvas() as unknown as CanvasImageSource, layout.qr.x, layout.qr.y);
 
-    if (layout.label) {
-      const { band, font, color, text } = layout.label;
-      context.font = font;
-      context.fillStyle = color;
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText(text, band.x + band.width / 2, band.y + band.height / 2);
-    }
+    layout.labels.forEach((label) =>
+      label.lines.forEach(({ x, y, font, color, text }) => {
+        context.font = font;
+        context.fillStyle = color;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(text, x, y);
+      })
+    );
   }
 
   async drawQR(qr: QRCode): Promise<void> {

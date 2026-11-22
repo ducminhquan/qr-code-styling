@@ -145,34 +145,36 @@ export default class QRSVG {
           fill: layout.background
         })
       );
-      if (layout.label) {
-        const { x, y, width, height } = layout.label.band;
-        this._element.appendChild(this._svgElement("rect", { x, y, width, height, fill: color }));
-      }
     } else {
       this.drawBackground();
     }
+    layout.labels.forEach(({ band, fill }) => {
+      if (!fill) return;
+      const { x, y, width, height } = band;
+      this._element.appendChild(this._svgElement("rect", { x, y, width, height, fill }));
+    });
 
     const element = inner.getElement();
     element.setAttribute("x", String(layout.qr.x));
     element.setAttribute("y", String(layout.qr.y));
     this._element.appendChild(element);
 
-    if (layout.label) {
-      const { band, color, text, fontSize, fontFamily, fontWeight } = layout.label;
-      const label = this._svgElement("text", {
-        x: band.x + band.width / 2,
-        y: band.y + band.height / 2,
-        fill: color,
-        "font-family": fontFamily,
-        "font-size": fontSize,
-        "font-weight": fontWeight,
-        "text-anchor": "middle",
-        "dominant-baseline": "central"
-      });
-      label.textContent = text;
-      this._element.appendChild(label);
-    }
+    layout.labels.forEach((label) =>
+      label.lines.forEach(({ x, y, color, text, fontSize, fontFamily, fontWeight }) => {
+        const element = this._svgElement("text", {
+          x,
+          y,
+          fill: color,
+          "font-family": fontFamily,
+          "font-size": fontSize,
+          "font-weight": fontWeight,
+          "text-anchor": "middle",
+          "dominant-baseline": "central"
+        });
+        element.textContent = text;
+        this._element.appendChild(element);
+      })
+    );
   }
 
   async drawQR(qr: QRCode): Promise<void> {
