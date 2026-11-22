@@ -12,6 +12,7 @@ import { getContrast } from "../art/art";
 import qrcode from "qrcode-generator";
 import toUTF8Bytes, { needsUTF8 } from "../tools/utf8";
 import payload from "../tools/payloads";
+import { configurePlugins } from "../tools/plugins";
 import { hasBrowserDom } from "../tools/svgDom";
 
 export default class QRCodeStyling {
@@ -27,7 +28,9 @@ export default class QRCodeStyling {
   _svgDrawingPromise?: Promise<void>;
 
   constructor(options?: Partial<Options>) {
-    this._options = options ? sanitizeOptions(mergeDeep(defaultOptions, options) as RequiredOptions) : defaultOptions;
+    this._options = options
+      ? configurePlugins(sanitizeOptions(mergeDeep(defaultOptions, options) as RequiredOptions))
+      : defaultOptions;
     this.update();
   }
 
@@ -84,7 +87,9 @@ export default class QRCodeStyling {
 
   update(options?: Partial<Options>): void {
     QRCodeStyling._clearContainer(this._container);
-    this._options = options ? sanitizeOptions(mergeDeep(this._options, options) as RequiredOptions) : this._options;
+    this._options = options
+      ? configurePlugins(sanitizeOptions(mergeDeep(this._options, options) as RequiredOptions))
+      : this._options;
 
     if (!this._options.data) {
       return;

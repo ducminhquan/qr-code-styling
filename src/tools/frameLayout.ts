@@ -82,7 +82,8 @@ export const innerOptions = (options: RequiredOptions, size: number): RequiredOp
   height: size,
   margin: 0,
   frameOptions: undefined,
-  labelOptions: undefined
+  labelOptions: undefined,
+  plugins: undefined
 });
 
 /** Area behind the logo: the logo box including its margin, with rounded corners. */

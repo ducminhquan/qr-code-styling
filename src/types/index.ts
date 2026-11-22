@@ -228,6 +228,8 @@ export type Options = {
    */
   shape?: ShapeType;
   /** SVG output only. */
+  /** Plugins that adjust options and draw on top of the code. See QRPlugin. */
+  plugins?: QRPlugin[];
   svgOptions?: {
     /** Draw all dots as one path instead of one element per module: smaller files, faster rendering. Default false. */
     mergePaths?: boolean;
@@ -336,3 +338,40 @@ export type RotateFigureArgsCanvas = RotateFigureArgs & {
 };
 
 export type GetNeighbor = (x: number, y: number) => boolean;
+
+/** Where the code (without margin and frame) is drawn in the output, in pixels. */
+export interface PluginArea {
+  x: number;
+  y: number;
+  /** Width and height of the code. */
+  size: number;
+  /** Size of one module. */
+  dotSize: number;
+  /** Modules across. */
+  count: number;
+}
+
+export interface PluginDrawContext {
+  type: DrawType;
+  options: Options;
+  area: PluginArea;
+  width: number;
+  height: number;
+  /** Canvas output: the 2D context to draw on. */
+  context?: CanvasRenderingContext2D;
+  /** SVG output: the root <svg> element, and the document to create elements with. */
+  svg?: SVGElement;
+  document?: Document;
+}
+
+/**
+ * A plugin. Both hooks are optional.
+ * - configure(options): return option changes to merge in before drawing (called again on every update, so
+ *   return the same changes for the same options).
+ * - afterDraw(draw): draw extra things on top, on the canvas context or into the SVG.
+ */
+export interface QRPlugin {
+  name?: string;
+  configure?: (options: Options) => Partial<Options> | void;
+  afterDraw?: (draw: PluginDrawContext) => void | Promise<void>;
+}

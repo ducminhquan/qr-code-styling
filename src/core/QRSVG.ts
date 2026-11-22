@@ -7,6 +7,7 @@ import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import getQRArea from "../tools/qrArea";
+import { getPluginArea, runAfterDraw } from "../tools/plugins";
 import { getCircleLayout, isCircle } from "../tools/circle";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
@@ -174,6 +175,20 @@ export default class QRSVG {
   }
 
   async drawQR(qr: QRCode): Promise<void> {
+    await this._drawCode(qr);
+    if (this._options.plugins?.length) {
+      await runAfterDraw(this._options, {
+        type: "svg",
+        area: getPluginArea(this._options, qr.getModuleCount()),
+        width: this._options.width,
+        height: this._options.height,
+        svg: this._element,
+        document: this._window.document as unknown as Document
+      });
+    }
+  }
+
+  async _drawCode(qr: QRCode): Promise<void> {
     if (hasFrame(this._options)) {
       this._qr = qr;
       return this._drawFramed(qr);

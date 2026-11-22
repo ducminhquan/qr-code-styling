@@ -5,6 +5,7 @@ import QRCornerSquare from "../figures/cornerSquare/canvas/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/canvas/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import getQRArea from "../tools/qrArea";
+import { getPluginArea, runAfterDraw } from "../tools/plugins";
 import { getCircleLayout, isCircle } from "../tools/circle";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
@@ -130,6 +131,19 @@ export default class QRCanvas {
   }
 
   async drawQR(qr: QRCode): Promise<void> {
+    await this._drawCode(qr);
+    if (this._options.plugins?.length) {
+      await runAfterDraw(this._options, {
+        type: "canvas",
+        area: getPluginArea(this._options, qr.getModuleCount()),
+        width: this._options.width,
+        height: this._options.height,
+        context: this.context as CanvasRenderingContext2D
+      });
+    }
+  }
+
+  async _drawCode(qr: QRCode): Promise<void> {
     if (hasFrame(this._options)) {
       this._qr = qr;
       return this._drawFramed(qr);

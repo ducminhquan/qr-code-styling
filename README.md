@@ -231,6 +231,38 @@ const result = await qrCode.share({ name: "wifi", extension: "png", title: "Wi-F
 // "shared", "cancelled" or "downloaded"
 ```
 
+### Plugins
+
+A plugin is a plain object with two optional hooks. `configure(options)` returns option changes to merge in before
+drawing. `afterDraw(draw)` draws on top of the finished code, with the canvas context or the SVG element. It gets
+the code's area in pixels (`x`, `y`, `size`, `dotSize`, `count`), and that area accounts for frames.
+
+```js
+const ring = {
+  name: "ring",
+  configure: (options) => (options.margin < 24 ? { margin: 24 } : undefined),
+  afterDraw: ({ type, area, context, svg, document }) => {
+    const cx = area.x + area.size / 2, cy = area.y + area.size / 2, r = area.size * 0.75;
+    if (type === "canvas") {
+      context.beginPath();
+      context.arc(cx, cy, r, 0, Math.PI * 2);
+      context.strokeStyle = "#e11d48";
+      context.stroke();
+    } else {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      Object.entries({ cx, cy, r, fill: "none", stroke: "#e11d48" }).forEach(([k, v]) => circle.setAttribute(k, v));
+      svg.appendChild(circle);
+    }
+  }
+};
+
+new QRCodeStyling({ data: "https://example.com", plugins: [ring] });
+```
+
+Plugins run in order, and async `afterDraw` hooks are awaited. `configure` runs again on every `update()`, so it
+should return the same changes for the same options. Check the result with `verify()` when a plugin draws near
+the code.
+
 ### Checking that a code scans
 
 `verify()` renders the code and decodes it with a QR decoder you pass in, so the library itself stays dependency-free.
@@ -268,6 +300,7 @@ height                 |number                   |`300`        |Size of canvas
 type                   |string (`'canvas' 'svg'`)|`canvas`     |The type of the element that will be rendered
 shape                  |string (`'square' 'circle'`)|`'square'` |`'circle'` draws a round code with decorative dots around the real one
 svgOptions             |object `{ mergePaths }`  |             |SVG only: `mergePaths: true` draws all dots as one path (smaller files)
+plugins                |array                    |             |Plugins with `configure` and `afterDraw` hooks, see [Plugins](#plugins)
 data                   |string                   |             |The date will be encoded to the QR code
 image                  |string                   |             |The image will be copied to the center of the QR code
 margin                 |number                   |`0`          |Margin around canvas

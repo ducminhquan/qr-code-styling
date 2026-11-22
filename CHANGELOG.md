@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.0
+
+Plugins. Without plugins, output is unchanged.
+
+### Added
+- `plugins` option: each plugin can `configure(options)` (return option changes, merged before drawing) and `afterDraw(draw)` (draw on the canvas context or into the SVG, with the code's area in pixels, frames included). Async hooks are awaited and plugins run in order. Works in the browser and on Node, including the built-in SVG DOM.
+
 ## 1.12.0
 
 New dot types and smaller SVG files. Existing options render exactly as before.
