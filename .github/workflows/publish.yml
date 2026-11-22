@@ -11,7 +11,8 @@ name: Publish to npm
 #   its GitHub release with the CHANGELOG section. Creating a release with a new tag on github.com pushes
 #   the tag too, so it does the same (only once).
 #   Tags with a "-" (v2.1.0-beta.1) are pre-releases and use the npm dist-tag "next".
-# - "Run workflow" (manual) publishes the versions 1.6.0 to 1.14.0 that were never released, oldest first,
+# - "Run workflow" with a version (for example 2.0.0) does the same from the chosen branch and creates the tag.
+# - "Run workflow" with no version publishes the versions 1.6.0 to 1.14.0 that were never released, oldest first,
 #   from the commit of each version. They get the npm dist-tag "previous", so "latest" is not moved, and
 #   each gets a git tag and a GitHub release with its CHANGELOG section. Versions already on npm are skipped,
 #   so the run can be repeated safely.
@@ -19,6 +20,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release from this branch, e.g. 2.0.0 (creates tag v2.0.0). Leave empty to backfill 1.6.0 to 1.14.0."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -26,14 +32,14 @@ permissions:
 
 jobs:
   publish:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || inputs.version != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write # GitHub release for the tag
       id-token: write
     env:
-      TAG: ${{ github.ref_name }}
-      PRERELEASE: ${{ contains(github.ref_name, '-') && 'true' || 'false' }}
+      TAG: ${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}
+      PRERELEASE: ${{ contains(github.event_name == 'push' && github.ref_name || inputs.version, '-') && 'true' || 'false' }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -69,10 +75,10 @@ jobs:
           awk -v v="## ${TAG#v}" '$0 == v { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
           FLAGS=""
           if [ "$PRERELEASE" = "true" ]; then FLAGS="--prerelease"; fi
-          gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" $FLAGS
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" $FLAGS
 
   backfill:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.version == ''
     runs-on: ubuntu-latest
     permissions:
       contents: write # git tag and GitHub release for each version
