@@ -116,6 +116,7 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
     linear-gradient(45deg, var(--bg) 25%, transparent 25%, transparent 75%, var(--bg) 75%);
   background-size: 20px 20px; background-position: 0 0, 10px 10px;
 }
+.stage.tall { aspect-ratio: auto; }
 .stage > * { max-width: 100%; max-height: 100%; width: 100% !important; height: auto !important; display: block; }
 .status { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 20px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
@@ -168,7 +169,7 @@ pre {
         <label class="f">Size (px)<input type="number" id="size" value="300" min="100" max="2000" step="10"></label>
         <label class="f">Margin (px)<input type="number" id="margin" value="10" min="0" max="200"></label>
         <label class="f">Shape
-          <select id="shape"><option value="square">Square</option><option value="circle">Circle</option></select>
+          <select id="shape"><option value="square">Square</option><option value="circle">Circle</option><option value="heart">Heart</option><option value="hexagon">Hexagon</option><option value="octagon">Octagon</option><option value="diamond">Diamond</option></select>
         </label>
         <label class="f">Render as
           <select id="drawType"><option value="canvas">Canvas</option><option value="svg">SVG</option></select>
@@ -314,6 +315,12 @@ pre {
       ["account", "Account number", "text", "0011001234567"], ["amount", "Amount (VND, optional)", "text", "50000"],
       ["message", "Description", "text", "Thanh toán đơn LC123"]],
       build: function (v) { var o = clean(v); return { data: payload.vietQR(o), code: "payload.vietQR(" + js(o) + ")" }; } },
+    vietqrcard: { label: "VietQR card", fields: [["bank", "Bank (short name or BIN)", "text", "VCB"],
+      ["account", "Account number", "text", "0011001234567"], ["amount", "Amount (VND, optional)", "text", "150000"],
+      ["accountName", "Account name", "text", "Nhà thuốc Long Châu"], ["message", "Description", "text", "Don LC1024"],
+      ["theme", "Theme", ["blue", "red", "green", "purple", "orange", "black"], "blue"]],
+      build: function (v) { var o = clean(v); var t = QRCodeStyling.templates.vietQR(o);
+        return { data: t.data, code: "templates.vietQR(" + js(o) + ")", template: t }; } },
     gs1: { label: "GS1 product", fields: [["gtin", "GTIN (barcode number)", "text", "8935049500131"],
       ["lot", "Batch / lot", "text", "A12"], ["expiry", "Expiry (YYYY-MM-DD)", "text", "2027-06-30"],
       ["domain", "Your resolver (optional)", "url", ""]],
@@ -411,7 +418,7 @@ pre {
     var size = num("size") || 300;
     var o = { type: $("drawType").value, width: size, height: size, data: content.data || " ", margin: num("margin") || 0,
       qrOptions: { errorCorrectionLevel: $("ecl").value } };
-    if ($("shape").value === "circle") o.shape = "circle";
+    if ($("shape").value !== "square") o.shape = $("shape").value;
 
     var dotColor = $("dotColor").value;
     o.dotsOptions = { type: $("dotType").value, color: dotColor };
@@ -450,6 +457,13 @@ pre {
       o.art = { image: art, mode: mode, contrast: Number($("artContrast").value) };
       if (mode === "halftone" && $("artColored").checked) o.art.colored = true;
     }
+    if (content.template) {
+      // A template sets the whole design; the shape and render type still apply.
+      var t = JSON.parse(JSON.stringify(content.template));
+      t.type = o.type;
+      if (o.shape) t.shape = o.shape;
+      return { options: t, dataCode: content.code, templateCode: content.code, error: content.error };
+    }
     return { options: o, dataCode: content.code, error: content.error };
   }
 
@@ -477,6 +491,14 @@ pre {
   }
 
   function codeFor(state) {
+    if (state.templateCode) {
+      var extra = [];
+      if (state.options.type === "svg") extra.push('type: "svg"');
+      if (state.options.shape) extra.push("shape: " + JSON.stringify(state.options.shape));
+      return 'import QRCodeStyling, { templates } from "qr-code-styling-node";\n\n' +
+        "const qrCode = new QRCodeStyling(" + (extra.length ? "{\n  ..." + state.templateCode.replace(/\n/g, "\n  ") + ",\n  " + extra.join(",\n  ") + "\n}" : state.templateCode) + ");\n\n" +
+        'qrCode.append(document.getElementById("qr"));\n';
+    }
     var o = JSON.parse(JSON.stringify(state.options));
     o.data = "@@" + state.dataCode.replace(/\n/g, "\n  ");
     if (o.type === "canvas") delete o.type;
@@ -514,13 +536,17 @@ pre {
     current = collect();
     var stage = $("stage");
     try {
-      if (!qr || qr._options.type !== current.options.type) {
+      // Templates set many options at once: start from a fresh code when switching to or from one.
+      var templateChanged = !!(qr && qr._fromTemplate) !== !!current.templateCode;
+      if (!qr || qr._options.type !== current.options.type || templateChanged) {
         qr = new QRCodeStyling(current.options);
+        qr._fromTemplate = !!current.templateCode;
         stage.innerHTML = "";
         qr.append(stage);
       } else {
         qr.update(current.options);
       }
+      stage.classList.toggle("tall", current.options.height > current.options.width);
       showCheck();
     } catch (err) {
       setStatus("bad", "Can’t draw this: " + (err && err.message ? err.message : err));
