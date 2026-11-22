@@ -1,0 +1,35 @@
+name: Publish to npm
+
+# Runs when a GitHub release is published, for example tag v2.0.0.
+# Needs the repository secret NPM_TOKEN (an npm access token that can publish qr-code-styling-node).
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - name: Check the tag matches package.json
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "${{ github.event.release.tag_name }}" ]; then
+            echo "Release tag ${{ github.event.release.tag_name }} does not match package.json ($VERSION)"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run typecheck
+      # prepublishOnly runs lint, tests and the build before publishing.
+      - run: npm publish --provenance --access public --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
