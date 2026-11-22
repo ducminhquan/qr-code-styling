@@ -644,9 +644,13 @@ npm run lint      # eslint + prettier
 npm run build     # lib/: UMD, CommonJS, ES module, React and Vue wrappers, types
 npm run playground # builds the playground into site/
 npm start         # dev server
+npm run commit    # write a commit message step by step (commitizen)
 ```
 
-`npm run art-examples`, `blend-examples`, `circle-examples`, `dot-examples` and `style-examples` regenerate the
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat(vietqr): ...`,
+`fix: ...`, `docs: ...`). `npm install` sets up a git hook that checks each message with commitlint.
+
+`npm run art-examples`, `blend-examples`, `circle-examples`, `dot-examples`, `retail-examples` and `style-examples` regenerate the
 images in this README.
 
 ## License

@@ -102,7 +102,9 @@
     "circle-examples": "npm run build && node scripts/circle-examples.mjs",
     "dot-examples": "npm run build && node scripts/dot-examples.mjs",
     "playground": "npm run build && node scripts/build-playground.mjs",
-    "retail-examples": "npm run build && node scripts/retail-examples.mjs"
+    "retail-examples": "npm run build && node scripts/retail-examples.mjs",
+    "commit": "cz",
+    "prepare": "husky"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.3"
@@ -120,6 +122,8 @@
     }
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.39.5",
     "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^22.20.5",
@@ -127,12 +131,15 @@
     "@types/react-dom": "^18.3.1",
     "@vitest/coverage-v8": "^2.1.9",
     "canvas": "^3.2.3",
+    "commitizen": "^4.3.2",
+    "cz-conventional-changelog": "^3.3.0",
     "esbuild": "^0.24.2",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^9.1.2",
     "eslint-plugin-prettier": "^5.5.7",
     "globals": "^15.15.0",
     "html-webpack-plugin": "^5.6.8",
+    "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "jsqr": "^1.4.0",
     "prettier": "^3.10.1",
@@ -148,5 +155,10 @@
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.7",
     "webpack-merge": "^6.0.1"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
   }
 }
