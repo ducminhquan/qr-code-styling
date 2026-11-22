@@ -288,8 +288,8 @@ payload.sms({ number: "+84900000000", message: "Xin chào" });
 payload.geo({ latitude: 10.7769, longitude: 106.7009 });
 ```
 
-Special characters are escaped as each format requires. Text with characters outside Latin-1 (Vietnamese,
-emoji, CJK) is encoded as UTF-8, which is what scanners expect.
+Special characters are escaped as each format requires. Any text with accents (Vietnamese, French, emoji,
+CJK) is encoded as UTF-8, which is what scanners expect.
 
 ### Download and share
 
@@ -405,6 +405,7 @@ Property            |Type                                              |Default
 typeNumber          |number (`0`-`40`, `0` = smallest that fits)       |`0`
 mode                |`'Numeric'` \| `'Alphanumeric'` \| `'Byte'` \| `'Kanji'`|picked from the data
 errorCorrectionLevel|`'L'` \| `'M'` \| `'Q'` \| `'H'`                  |`'Q'`
+encoding            |`'utf-8'` \| `'latin1'`                           |`'utf-8'`: text with accents is UTF-8. `'latin1'` writes Latin-1 text one byte per character, as 1.x did
 
 `imageOptions`
 
@@ -506,8 +507,9 @@ pixel by pixel. Things you can now drop or use:
 
 - **`jsdom` is no longer needed** for SVG on Node, and SVG is about 6x faster without it.
 - **`resvg`** gives PNG on a server without the native `canvas` package.
-- **Vietnamese and other non-Latin-1 text** is now encoded as UTF-8. 1.5.0 kept only one byte per character, so
-  such codes scanned as garbled text. Codes for Latin-1 text are unchanged.
+- **Text with accents** is now encoded as UTF-8. 1.5.0 kept only one byte per character, so Vietnamese, emoji and
+  CJK scanned as garbled text, and Latin-1 accents ("Cà phê", "Café") were not read by some scanners. Plain ASCII
+  codes are unchanged. To get the 1.5.0 bytes for Latin-1 text, pass `qrOptions: { encoding: "latin1" }`.
 
 ## Development
 

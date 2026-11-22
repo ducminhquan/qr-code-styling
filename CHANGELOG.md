@@ -8,8 +8,9 @@ working and draws the same picture, and every new feature is opt-in. The major v
 update and two changes in behaviour worth knowing about:
 
 - Node 18 or newer is required.
-- Text with characters outside Latin-1 (Vietnamese, emoji, CJK) is encoded as UTF-8, so it now reads back
-  correctly. Codes for Latin-1 text do not change.
+- Any text with accents is encoded as UTF-8, so Vietnamese, emoji and CJK now read back correctly, and Latin-1
+  accents ("Cà phê", "Café") read on scanners that expect UTF-8. Plain ASCII codes do not change. New
+  `qrOptions.encoding: "latin1"` keeps the 1.x bytes for Latin-1 text.
 
 Highlights: server-side SVG and PNG without jsdom or node-canvas, QR art (`halftone`, `colorize`, `blend`) with
 `verify()`, 14 dot types including `fluid`, `wave`, `blob` and `circuit`, frames and labels, round codes,

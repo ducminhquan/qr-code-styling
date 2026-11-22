@@ -13,6 +13,7 @@ export interface RequiredOptions extends Options {
     typeNumber: TypeNumber;
     mode?: Mode;
     errorCorrectionLevel: ErrorCorrectionLevel;
+    encoding?: "utf-8" | "latin1";
   };
   imageOptions: {
     saveAsBlob: boolean;

@@ -35,9 +35,8 @@ export const radial = {
 
 export const cases = {
   defaults: { data: "https://nhathuoclongchau.com.vn" },
-  // Latin-1 text keeps the 1.5.0 encoding. Text beyond Latin-1 (most Vietnamese) is now UTF-8: 1.5.0
-  // dropped the high byte of each character, so those codes did not read back (see test/features.test.js).
-  "latin-1 data": { data: "Café crème - 12 ½", qrOptions: { errorCorrectionLevel: "H" } },
+  // Since 2.0 non-ASCII text is UTF-8 (see test/features.test.js). encoding "latin1" keeps the 1.5.0 bytes.
+  "latin-1 data": { data: "Café crème - 12 ½", qrOptions: { errorCorrectionLevel: "H", encoding: "latin1" } },
   "numeric, level L, fixed version": { data: "0123456789", qrOptions: { typeNumber: 4, errorCorrectionLevel: "L" } },
   "with margin": { data: "margin", margin: 24 },
   "non-square size": { data: "size", width: 320, height: 240 },

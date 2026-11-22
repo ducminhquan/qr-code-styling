@@ -8,15 +8,31 @@ import { diffImages } from "./helpers/image";
 const LONG = "https://nhathuoclongchau.com.vn/san-pham/thuoc-abc-123?utm_source=qr";
 
 describe("Unicode data", () => {
-  it.each(["Nhà thuốc Long Châu – đơn thuốc #12345", "Nguyễn Văn Quân 💊", "東京 ✓"])("reads back %s", async (data) => {
+  it.each([
+    "Nhà thuốc Long Châu – đơn thuốc #12345",
+    "Nguyễn Văn Quân 💊",
+    "東京 ✓",
+    "Cà phê",
+    "Bánh mì",
+    "Café crème"
+  ])("reads back %s", async (data) => {
     const result = await new QRCodeStyling({ data, nodeCanvas }).verify({ decoder: jsQR });
     expect(result).toMatchObject({ readable: true, decoded: data });
   });
 
+  it('encoding "latin1" keeps the 1.x bytes for Latin-1 text and still uses UTF-8 beyond it', async () => {
+    const svg = async (options) => (await new QRCodeStyling({ type: "svg", ...options }).getRawData("svg")).toString();
+    const latin1 = await svg({ data: "café", qrOptions: { encoding: "latin1" } });
+    expect(latin1).not.toBe(await svg({ data: "café" }));
+    expect(await svg({ data: "Phở", qrOptions: { encoding: "latin1" } })).toBe(await svg({ data: "Phở" }));
+    const plain = await svg({ data: "cafe", qrOptions: { encoding: "latin1" } });
+    expect(plain).toBe(await svg({ data: "cafe" }));
+  });
+
   it("does not change how other instances encode Latin-1 text", async () => {
     new QRCodeStyling({ data: "Nhà thuốc" });
-    const a = new QRCodeStyling({ data: "café", type: "svg" });
-    const b = new QRCodeStyling({ data: "café", type: "svg" });
+    const a = new QRCodeStyling({ data: "café", type: "svg", qrOptions: { encoding: "latin1" } });
+    const b = new QRCodeStyling({ data: "café", type: "svg", qrOptions: { encoding: "latin1" } });
     expect((await a.getRawData("svg")).toString()).toBe((await b.getRawData("svg")).toString());
   });
 });
