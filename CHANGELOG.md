@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.2.0
+
+Payment cards and shaped codes. Existing options draw exactly the same picture.
+
+### Added
+- `templates.vietQR({ bank, account, amount, accountName, theme, logo })`: options for a finished VietQR card
+  with theme colors, a header, and the amount, account name, bank and description under the code. Six themes or
+  any `color`, an optional logo (no bank logos are bundled), `layout: "plain"` for just the code. Also
+  `formatVND()` and `vietQRBankNames`.
+- `shape`: `"heart"`, `"hexagon"`, `"octagon"` and `"diamond"`, built like `"circle"`: the real code stays square
+  with its quiet ring, decoration fills the outline, and the background is cut to it.
+- `labelOptions` can be an array for a label on top and one at the bottom. Labels can have several lines (`"\n"` in
+  `text`, or `lines` with their own size, weight and color) and a `background` (`"none"` for no band).
+- Playground: the new shapes and a "VietQR card" content type.
+
+### Development
+- Commit messages follow Conventional Commits: `npm run commit` (commitizen), checked by commitlint in a husky
+  commit-msg hook.
+
 ## 2.1.0
 
 Tools for shops: payment and product codes, a scan check, and printing many codes. Existing options draw
