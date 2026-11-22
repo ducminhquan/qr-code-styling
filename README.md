@@ -296,6 +296,11 @@ CJK) is encoded as UTF-8, which is what scanners expect.
 
 ### VietQR bank transfers
 
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/retail_examples.png" width="720" />
+
+A VietQR payment code, two GS1 product labels and a product page link, laid out with
+[`sheet()`](#printing-many-codes) (`npm run retail-examples`).
+
 `payload.vietQR()` builds the NAPAS VietQR code that every Vietnamese banking app scans (EMVCo format, with its
 checksum). Leave out `amount` for a static code the payer fills in; with `amount` the app fills it for them.
 
