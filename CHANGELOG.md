@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.0
+
+Everything listed under 1.6.0 to 1.14.0 below, which were developed in this repository after 1.5.0. Those
+versions are also on npm under the dist-tag `previous`; 2.0.0 is the one to install. The options API is the same: code written for 1.5.0 keeps
+working and draws the same picture, and every new feature is opt-in. The major version marks the size of the
+update and two changes in behaviour worth knowing about:
+
+- Node 18 or newer is required.
+- Text with characters outside Latin-1 (Vietnamese, emoji, CJK) is encoded as UTF-8, so it now reads back
+  correctly. Codes for Latin-1 text do not change.
+
+Highlights: server-side SVG and PNG without jsdom or node-canvas, QR art (`halftone`, `colorize`, `blend`) with
+`verify()`, 14 dot types including `fluid`, `wave`, `blob` and `circuit`, frames and labels, round codes,
+payload builders, `share()`, plugins, and React and Vue wrappers. Try them in the
+[playground](https://ducminhquan.github.io/qr-code-styling/).
+
+### Release
+- Published from GitHub Actions with npm Trusted Publishing (no token) when a GitHub release is created, with provenance. Running the workflow by hand publishes 1.6.0 to 1.14.0 from their own commits.
+
 ## 1.14.0
 
 React and Vue wrappers. The core and its output are unchanged.
