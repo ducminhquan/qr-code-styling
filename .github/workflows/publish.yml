@@ -1,12 +1,18 @@
 name: Publish to npm
 
-# Runs when a GitHub release is published, for example tag v2.0.0.
 # Uses npm Trusted Publishing (OIDC): no token. On npmjs.com, the package's Trusted Publisher must be
 # GitHub Actions, user ducminhquan, repository qr-code-styling, workflow publish.yml.
 # https://docs.npmjs.com/trusted-publishers
+#
+# - A published GitHub release (for example tag v2.0.0) publishes that version as "latest".
+# - "Run workflow" (manual) publishes the versions 1.6.0 to 1.14.0 that were never released, oldest first,
+#   from the commit of each version. They get the npm dist-tag "previous", so "latest" is not moved, and
+#   each gets a git tag and a GitHub release with its CHANGELOG section. Versions already on npm are skipped,
+#   so the run can be repeated safely.
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,6 +20,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,3 +45,67 @@ jobs:
       # prepublishOnly runs lint, tests and the build before publishing.
       # Provenance is added automatically with Trusted Publishing.
       - run: npm publish --access public --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+
+  backfill:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # git tag and GitHub release for each version
+      id-token: write
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        include:
+          - { version: 1.6.0, sha: 0d1bb4f8ff236d3e3c50164cd73436f08641ed15 }
+          - { version: 1.7.0, sha: 57cbfe7670f742e59572b7b73cff57b942455cf2 }
+          - { version: 1.8.0, sha: 441a7314accc620eadcbb19ab47eb5235b3dc926 }
+          - { version: 1.9.0, sha: 8b7dc8dce3324ae07475b39ad9297d3846937ebd }
+          - { version: 1.10.0, sha: 89b06d52b97f1113954e8528970b683098dc73f6 }
+          - { version: 1.11.0, sha: b98dbc794ff6a7869bd5c5bdcd5cd1bd495d8fa1 }
+          - { version: 1.12.0, sha: c73630012868081bd9208f040a1a66adba3fa163 }
+          - { version: 1.13.0, sha: a7714966e0a4e505226fe1254b2f252374814aa5 }
+          - { version: 1.14.0, sha: b4e56d5662810453f1a1d4929f2d1e03db1326fe }
+    env:
+      VERSION: ${{ matrix.version }}
+      SHA: ${{ matrix.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@latest
+      - name: Skip if already on npm
+        id: check
+        run: |
+          if npm view "qr-code-styling-node@$VERSION" version >/dev/null 2>&1; then
+            echo "$VERSION is already on npm, skipping the publish."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Release notes from the CHANGELOG
+        run: |
+          awk -v v="## $VERSION" '$0 == v { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          test -s "$RUNNER_TEMP/notes.md"
+      - name: Check out the version's commit
+        run: |
+          git checkout --detach "$SHA"
+          test "$(node -p "require('./package.json').version")" = "$VERSION"
+      - if: steps.check.outputs.published == 'false'
+        run: npm ci
+      # prepublishOnly runs lint, tests and the build of that version before publishing.
+      - if: steps.check.outputs.published == 'false'
+        run: npm publish --access public --tag previous
+      - name: Git tag and GitHub release
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists."
+          else
+            gh release create "v$VERSION" --target "$(git rev-parse HEAD)" --title "v$VERSION" \
+              --notes-file "$RUNNER_TEMP/notes.md" --latest=false
+          fi
