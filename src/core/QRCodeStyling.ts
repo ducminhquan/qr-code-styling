@@ -7,7 +7,8 @@ import drawTypes from "../constants/drawTypes";
 
 import defaultOptions, { RequiredOptions } from "./QROptions";
 import sanitizeOptions from "../tools/sanitizeOptions";
-import { Extension, QRCode, Options, DownloadOptions } from "../types";
+import { Extension, QRCode, Options, DownloadOptions, VerifyOptions, VerifyResult } from "../types";
+import { getContrast } from "../art/art";
 import qrcode from "qrcode-generator";
 import { hasBrowserDom } from "../tools/svgDom";
 
@@ -188,6 +189,74 @@ export default class QRCodeStyling {
       .asPng();
 
     return typeof Buffer !== "undefined" ? Buffer.from(png) : png;
+  }
+
+  /** Draws the current QR code to RGBA pixels, using a canvas or, failing that, resvg. */
+  async _getPixels(): Promise<{ data: Uint8ClampedArray; width: number; height: number }> {
+    if (this._canUseCanvas()) {
+      const canvas = ((await this._getQRStylingElement("png")) as QRCanvas).getCanvas();
+      const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+      return {
+        data: context.getImageData(0, 0, canvas.width, canvas.height).data,
+        width: canvas.width,
+        height: canvas.height
+      };
+    }
+    if (this._options.resvg) {
+      const { svgString } = await this._getSVGString();
+      const rendered = new this._options.resvg(QRCodeStyling._normalizeSVGForResvg(svgString), {
+        fitTo: { mode: "original" }
+      }).render();
+      return { data: new Uint8ClampedArray(rendered.pixels), width: rendered.width, height: rendered.height };
+    }
+    throw new Error(
+      "verify() needs to draw the QR code: in a browser this works as is; on a server pass nodeCanvas or resvg."
+    );
+  }
+
+  async _decode(decoder: VerifyOptions["decoder"]): Promise<string | undefined> {
+    const { data, width, height } = await this._getPixels();
+    // Surround the code with a white quiet zone, as a printed code would have.
+    const pad = Math.max(16, Math.round(Math.min(width, height) / 8));
+    const paddedWidth = width + pad * 2;
+    const paddedHeight = height + pad * 2;
+    const padded = new Uint8ClampedArray(paddedWidth * paddedHeight * 4).fill(255);
+    for (let y = 0; y < height; y++) {
+      padded.set(data.subarray(y * width * 4, (y + 1) * width * 4), ((y + pad) * paddedWidth + pad) * 4);
+    }
+    const result = decoder(padded, paddedWidth, paddedHeight, { inversionAttempts: "attemptBoth" });
+    return result ? result.data : undefined;
+  }
+
+  /**
+   * Checks that the QR code can be scanned by decoding the rendered picture.
+   * With `adjust: true` and QR art, raises art.contrast step by step until it scans.
+   */
+  async verify({ decoder, adjust = false }: VerifyOptions): Promise<VerifyResult> {
+    if (!this._qr) throw "QR code is empty";
+    if (typeof decoder !== "function")
+      throw new Error("verify() needs a decoder, for example jsQR from the jsqr package");
+
+    let attempts = 1;
+    let decoded = await this._decode(decoder);
+    const art = this._options.art;
+
+    if (decoded !== this._options.data && adjust && art) {
+      const start = getContrast(art);
+      for (const contrast of [0.65, 0.8, 0.9, 1].filter((value) => value > start)) {
+        attempts++;
+        this.update({ art: { ...art, contrast } });
+        decoded = await this._decode(decoder);
+        if (decoded === this._options.data) break;
+      }
+    }
+
+    return {
+      readable: decoded === this._options.data,
+      decoded,
+      contrast: this._options.art ? getContrast(this._options.art) : undefined,
+      attempts
+    };
   }
 
   async getRawData(extension: Extension = "png"): Promise<Blob | Buffer | null> {

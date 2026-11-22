@@ -4,6 +4,7 @@ import QRDot from "../figures/dot/svg/QRDot";
 import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
+import { prepareArt, PreparedArt, ArtRect } from "../art/art";
 import gradientTypes from "../constants/gradientTypes";
 import { QRCode, FilterFunction, Gradient, Window, Canvas } from "../types";
 import { createVirtualWindow, hasBrowserDom } from "../tools/svgDom";
@@ -45,6 +46,8 @@ export default class QRSVG {
   _imageUri?: string;
   /** True when no browser DOM or jsdom is available and the built-in virtual DOM is used. */
   _virtual = false;
+  /** Image used to paint the dots instead of their color (QR art "colorize"). */
+  _dotsImageHref?: string;
 
   //TODO don't pass all options to this class
   constructor(options: RequiredOptions) {
@@ -127,9 +130,7 @@ export default class QRSVG {
       });
     }
 
-    this.clear();
-    this.drawBackground();
-    this.drawDots((i: number, j: number): boolean => {
+    const filter = (i: number, j: number): boolean => {
       if (this._options.imageOptions.hideBackgroundDots) {
         if (
           i >= (count - drawImageSize.hideXDots) / 2 &&
@@ -150,7 +151,27 @@ export default class QRSVG {
       }
 
       return true;
-    });
+    };
+
+    let art: PreparedArt | undefined;
+    if (this._options.art) {
+      art = await prepareArt(this._options, qr, filter);
+    }
+
+    this.clear();
+    this.drawBackground();
+    if (art?.mode === "halftone") {
+      this._drawArtRects(art.rects);
+      // No regular dots, but set up the dots color so corners without their own color use it.
+      this.drawDots(() => false);
+    } else {
+      if (art?.mode === "colorize") {
+        if (art.background) this._appendImage(art.background.toDataURL("image/png"), 0, 0);
+        this._dotsImageHref = art.dots.toDataURL("image/png");
+      }
+      this.drawDots(filter);
+      this._dotsImageHref = undefined;
+    }
     this.drawCorners();
 
     if (this._options.image) {
@@ -215,7 +236,8 @@ export default class QRSVG {
       y: yBeginning,
       height: count * dotSize,
       width: count * dotSize,
-      name: "dot-color"
+      name: "dot-color",
+      imageHref: this._dotsImageHref
     });
 
     for (let i = 0; i < count; i++) {
@@ -391,6 +413,28 @@ export default class QRSVG {
     });
   }
 
+  _drawArtRects(rects: ArtRect[]): void {
+    rects.forEach(({ x, y, width, height, color }) => {
+      const rect = this._window.document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", String(x));
+      rect.setAttribute("y", String(y));
+      rect.setAttribute("width", String(width));
+      rect.setAttribute("height", String(height));
+      rect.setAttribute("fill", color);
+      this._element.appendChild(rect);
+    });
+  }
+
+  _appendImage(href: string, x: number, y: number): void {
+    const image = this._window.document.createElementNS("http://www.w3.org/2000/svg", "image");
+    image.setAttribute("href", href);
+    image.setAttribute("x", String(x));
+    image.setAttribute("y", String(y));
+    image.setAttribute("width", String(this._options.width));
+    image.setAttribute("height", String(this._options.height));
+    this._element.appendChild(image);
+  }
+
   imageToBlob(): void {
     if (!this._image) return;
     // fix blurry svg
@@ -493,8 +537,10 @@ export default class QRSVG {
     y,
     height,
     width,
-    name
+    name,
+    imageHref
   }: {
+    imageHref?: string;
     options?: Gradient;
     color?: string;
     additionalRotation: number;
@@ -505,6 +551,17 @@ export default class QRSVG {
     name: string;
   }): void {
     const size = width > height ? width : height;
+    if (imageHref) {
+      const image = this._window.document.createElementNS("http://www.w3.org/2000/svg", "image");
+      image.setAttribute("href", imageHref);
+      image.setAttribute("x", "0");
+      image.setAttribute("y", "0");
+      image.setAttribute("width", String(this._options.width));
+      image.setAttribute("height", String(this._options.height));
+      image.setAttribute("clip-path", `url('#clip-path-${name}')`);
+      this._element.appendChild(image);
+      return;
+    }
     const rect = this._window.document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("x", String(x));
     rect.setAttribute("y", String(y));
