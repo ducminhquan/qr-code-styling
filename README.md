@@ -509,7 +509,8 @@ pixel by pixel. Things you can now drop or use:
 - **`resvg`** gives PNG on a server without the native `canvas` package.
 - **Text with accents** is now encoded as UTF-8. 1.5.0 kept only one byte per character, so Vietnamese, emoji and
   CJK scanned as garbled text, and Latin-1 accents ("Cà phê", "Café") were not read by some scanners. Plain ASCII
-  codes are unchanged. To get the 1.5.0 bytes for Latin-1 text, pass `qrOptions: { encoding: "latin1" }`.
+  codes are unchanged. To get the 1.5.0 bytes for Latin-1 text, pass `qrOptions: { encoding: "latin1" }`
+  (since 2.0.1).
 
 ## Development
 
