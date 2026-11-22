@@ -85,7 +85,8 @@
     "style-examples": "npm run build && node scripts/style-examples.mjs",
     "blend-examples": "npm run build && node scripts/blend-examples.mjs",
     "circle-examples": "npm run build && node scripts/circle-examples.mjs",
-    "dot-examples": "npm run build && node scripts/dot-examples.mjs"
+    "dot-examples": "npm run build && node scripts/dot-examples.mjs",
+    "playground": "npm run build && node scripts/build-playground.mjs"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.3"

@@ -4,7 +4,7 @@ import prettierRecommended from "eslint-plugin-prettier/recommended";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: ["lib/**", "coverage/**", "node_modules/**"] },
+  { ignores: ["lib/**", "site/**", "coverage/**", "node_modules/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   prettierRecommended,

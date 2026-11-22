@@ -11,3 +11,6 @@
 /coverage
 # Packed tarballs
 *.tgz
+
+# Playground build
+/site
