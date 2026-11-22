@@ -1,97 +1,49 @@
+import { describe, it, expect } from "vitest";
 import QRCodeStyling from "./QRCodeStyling";
 import fs from "fs";
 import path from "path";
 import nodeCanvas from "canvas";
 import { JSDOM } from "jsdom";
+import { expectSameImage } from "../../test/helpers/image";
+
+const asset = (name) => fs.readFileSync(path.resolve(__dirname, "../assets/test", name));
+const readmeOptions = {
+  width: 300,
+  height: 300,
+  data: "TEST",
+  image:
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAAAnOwc2AAAAEUlEQVR42mNk+M+AARiHsiAAcCIKAYwFoQ8AAAAASUVORK5CYII=",
+  dotsOptions: {
+    color: "#4267b2",
+    type: "rounded"
+  },
+  backgroundOptions: {
+    color: "#e9ebee"
+  }
+};
 
 describe("Test QRCodeStyling class", () => {
-  beforeAll(() => {
-    global.document.body.innerHTML = "<div id='container'></div>";
+  it("The README example should work correctly", async () => {
+    const qrCode = new QRCodeStyling(readmeOptions);
+    document.body.innerHTML = "<div id='container'></div>";
+
+    qrCode.append(document.getElementById("container"));
+    await qrCode._canvasDrawingPromise;
+    await expectSameImage(qrCode._canvas.getCanvas(), asset("image_from_readme.png"));
   });
 
-  it("The README example should work correctly", (done) => {
-    const expectedQRCodeFile = fs.readFileSync(
-      path.resolve(__dirname, "../assets/test/image_from_readme.png"),
-      "base64"
-    );
-    const qrCode = new QRCodeStyling({
-      width: 300,
-      height: 300,
-      data: "TEST",
-      image:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAAAnOwc2AAAAEUlEQVR42mNk+M+AARiHsiAAcCIKAYwFoQ8AAAAASUVORK5CYII=",
-      dotsOptions: {
-        color: "#4267b2",
-        type: "rounded"
-      },
-      backgroundOptions: {
-        color: "#e9ebee"
-      }
-    });
-    global.document.body.innerHTML = "<div id='container'></div>";
+  it("Compatible with node-canvas", async () => {
+    const qrCode = new QRCodeStyling({ ...readmeOptions, nodeCanvas });
+    const buffer = await qrCode.getRawData("png");
 
-    const container = global.document.getElementById("container");
-
-    qrCode.append(container);
-    //TODO remove setTimout
-    setTimeout(() => {
-      expect(qrCode._canvas.getCanvas().toDataURL()).toEqual(expect.stringContaining(expectedQRCodeFile));
-      done();
-    });
+    expect(Buffer.isBuffer(buffer)).toBe(true);
+    await expectSameImage(buffer, asset("image_from_readme.png"));
   });
 
-  it("Compatible with node-canvas", (done) => {
-    const expectedQRCodeFile = fs.readFileSync(
-      path.resolve(__dirname, "../assets/test/image_from_readme.png"),
-      "base64"
-    );
-    const qrCode = new QRCodeStyling({
-      nodeCanvas,
-      width: 300,
-      height: 300,
-      data: "TEST",
-      image:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAAAnOwc2AAAAEUlEQVR42mNk+M+AARiHsiAAcCIKAYwFoQ8AAAAASUVORK5CYII=",
-      dotsOptions: {
-        color: "#4267b2",
-        type: "rounded"
-      },
-      backgroundOptions: {
-        color: "#e9ebee"
-      }
-    });
-    qrCode.getRawData("png").then((buffer) => {
-      const uri = `data:image/png;base64,${buffer.toString("base64")}`;
-      expect(uri).toEqual(expect.stringContaining(expectedQRCodeFile));
-      done();
-    });
-  });
+  it("Compatible with jsdom", async () => {
+    const qrCode = new QRCodeStyling({ ...readmeOptions, jsdom: JSDOM, type: "svg" });
+    const buffer = await qrCode.getRawData("svg");
 
-  it("Compatible with jsdom", (done) => {
-    const expectedQRCodeFile = fs.readFileSync(
-      path.resolve(__dirname, "../assets/test/image_from_readme.svg"),
-      "base64"
-    );
-    const qrCode = new QRCodeStyling({
-      jsdom: JSDOM,
-      type: "svg",
-      width: 300,
-      height: 300,
-      data: "TEST",
-      image:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAQAAAAnOwc2AAAAEUlEQVR42mNk+M+AARiHsiAAcCIKAYwFoQ8AAAAASUVORK5CYII=",
-      dotsOptions: {
-        color: "#4267b2",
-        type: "rounded"
-      },
-      backgroundOptions: {
-        color: "#e9ebee"
-      }
-    });
-    qrCode.getRawData("svg").then((buffer) => {
-      const svgString = buffer.toString("base64");
-      expect(svgString).toEqual(expect.stringContaining(expectedQRCodeFile));
-      done();
-    });
+    expect(buffer.toString()).toEqual(asset("image_from_readme.svg").toString());
   });
 });

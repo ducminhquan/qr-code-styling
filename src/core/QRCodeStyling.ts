@@ -118,8 +118,8 @@ export default class QRCodeStyling {
     const element = await this._getQRStylingElement(extension);
 
     if (extension.toLowerCase() === "svg") {
-      const serializer = new ((element as unknown) as QRSVG)._window.XMLSerializer();
-      const source = serializer.serializeToString(((element as unknown) as QRSVG).getElement());
+      const serializer = new (element as unknown as QRSVG)._window.XMLSerializer();
+      const source = serializer.serializeToString((element as unknown as QRSVG).getElement());
       const svgString = `<?xml version="1.0" standalone="no"?>\r\n${source}`;
 
       if (typeof Blob !== "undefined" && !this._options.jsdom) {
@@ -129,7 +129,7 @@ export default class QRCodeStyling {
       }
     } else {
       return new Promise((resolve) => {
-        const canvas = ((element as unknown) as QRCanvas).getCanvas();
+        const canvas = (element as unknown as QRCanvas).getCanvas();
         if (canvas.toBuffer) {
           resolve(canvas.toBuffer(`image/${extension}`));
         } else {
@@ -164,13 +164,13 @@ export default class QRCodeStyling {
 
     if (extension.toLowerCase() === "svg") {
       const serializer = new XMLSerializer();
-      let source = serializer.serializeToString(((element as unknown) as QRSVG).getElement());
+      let source = serializer.serializeToString((element as unknown as QRSVG).getElement());
 
       source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
       const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
       downloadURI(url, `${name}.svg`);
     } else {
-      const url = ((element as unknown) as QRCanvas).getCanvas().toDataURL(`image/${extension}`);
+      const url = (element as unknown as QRCanvas).getCanvas().toDataURL(`image/${extension}`);
       downloadURI(url, `${name}.${extension}`);
     }
   }

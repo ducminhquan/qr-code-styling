@@ -1,11 +1,8 @@
 const path = require("path");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const FileManagerPlugin = require('filemanager-webpack-plugin');
 
 const rootPath = path.resolve(__dirname, "./");
 const srcPath = path.resolve(rootPath, "src");
 const libPath = path.resolve(rootPath, "lib");
-const tmpPath = path.resolve(rootPath, "tmp");
 
 const shared = {
   entry: srcPath + "/index.ts",
@@ -14,50 +11,34 @@ const shared = {
       {
         test: /\.ts$/,
         loader: "ts-loader",
-        exclude: /node_modules/
-      },
-      {
-        enforce: "pre",
-        test: /\.ts$/,
-        loader: "eslint-loader",
-        exclude: /node_modules/
+        exclude: /node_modules/,
+        options: { configFile: "tsconfig.json", compilerOptions: { declaration: false, sourceMap: true } }
       }
     ]
   },
-  plugins: [
-    new CleanWebpackPlugin(),
-    new FileManagerPlugin({
-      events: {
-        onEnd: {
-          copy: [
-            { source: tmpPath + '/**/*', destination: libPath },
-          ],
-          delete: [tmpPath],
-        },
-      },
-    }),
-  ],
   resolve: {
     extensions: [".ts", ".js"]
   }
 };
 
-module.exports = [{
-  ...shared,
-  output: {
-    path: tmpPath,
-    filename: "qr-code-styling.js",
-    library: "QRCodeStyling",
-    libraryTarget: "umd",
-    libraryExport: "default"
+// Both bundles keep the exact file names, global name and export shape of
+// qr-code-styling-node@1.5.0 so existing <script> tags and require() calls keep working.
+module.exports = [
+  {
+    ...shared,
+    output: {
+      path: libPath,
+      filename: "qr-code-styling.js",
+      library: { name: "QRCodeStyling", type: "umd", export: "default" },
+      globalObject: "this"
+    }
   },
-}, {
-  ...shared,
-  output: {
-    path: tmpPath,
-    filename: "qr-code-styling.common.js",
-    library: "QRCodeStyling",
-    libraryTarget: "commonjs",
-    libraryExport: "default"
-  },
-}];
+  {
+    ...shared,
+    output: {
+      path: libPath,
+      filename: "qr-code-styling.common.js",
+      library: { name: "QRCodeStyling", type: "commonjs", export: "default" }
+    }
+  }
+];

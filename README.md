@@ -1,22 +1,26 @@
-# QR Code Styling
-[![Version](https://img.shields.io/npm/v/qr-code-styling.svg)](https://www.npmjs.org/package/qr-code-styling)
+# QR Code Styling (Node)
+[![npm](https://img.shields.io/npm/v/qr-code-styling-node.svg)](https://www.npmjs.com/package/qr-code-styling-node)
+[![CI](https://github.com/ducminhquan/qr-code-styling/actions/workflows/ci.yml/badge.svg)](https://github.com/ducminhquan/qr-code-styling/actions/workflows/ci.yml)
 
-JavaScript library for generating QR codes with a logo and styling.
+JavaScript library for generating styled QR codes with a logo: custom dots, corners, gradients and backgrounds.
+Works in the browser (canvas or SVG) and on Node.js servers, with a single dependency and one options object.
 
-Try it here https://qr-code-styling.com
+`qr-code-styling-node` is an independently maintained project. It started as a fork of
+[qr-code-styling](https://github.com/kozakdenys/qr-code-styling) by Denys Kozak and keeps its API,
+so code written for either package keeps working. See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
-If you have issues / suggestions / notes / questions, please open an issue or contact me. Let's create a cool library together.
+Found a bug or have an idea? [Open an issue](https://github.com/ducminhquan/qr-code-styling/issues).
 ### Examples
 <p float="left">
-<img style="display:inline-block" src="https://raw.githubusercontent.com/kozakdenys/qr-code-styling/master/src/assets/facebook_example_new.png" width="240" />
-<img style="display:inline-block" src="https://raw.githubusercontent.com/kozakdenys/qr-code-styling/master/src/assets/qr_code_example.png" width="240" />
-<img style="display:inline-block" src="https://raw.githubusercontent.com/kozakdenys/qr-code-styling/master/src/assets/telegram_example_new.png" width="240" />
+<img style="display:inline-block" src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/facebook_example_new.png" width="240" />
+<img style="display:inline-block" src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/qr_code_example.png" width="240" />
+<img style="display:inline-block" src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/telegram_example_new.png" width="240" />
 </p>
 
 ### Installation
 
 ```
-npm install qr-code-styling
+npm install qr-code-styling-node
 ```
 
 ### Usage
@@ -27,7 +31,7 @@ npm install qr-code-styling
 <head>
     <meta charset="UTF-8">
     <title>QR Code Styling</title>
-    <script type="text/javascript" src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/qr-code-styling-node@1.6.0/lib/qr-code-styling.js"></script>
 </head>
 <body>
 <div id="canvas"></div>
@@ -60,17 +64,16 @@ npm install qr-code-styling
 ```
 ---
 
-[**React example (Codesandbox)**](https://codesandbox.io/s/qr-code-styling-react-example-l8rwl?file=/src/App.js)
+### Using with a bundler or TypeScript
 
-[**Angular example (Codesandbox)**](https://codesandbox.io/s/agitated-panini-tpgb2?file=/src/app/app.component.ts)
+```js
+import QRCodeStyling, { dotTypes } from "qr-code-styling-node";
 
----
+const qrCode = new QRCodeStyling({ data: "https://example.com", dotsOptions: { type: dotTypes.rounded } });
+qrCode.append(document.getElementById("canvas"));
+```
 
-[**React example (source)**](https://github.com/kozakdenys/qr-code-styling-examples/tree/master/examples/react)
-
-[**Angular example (source)**](https://github.com/kozakdenys/qr-code-styling-examples/tree/master/examples/angular)
-
-[**Vue example (source)**](https://github.com/kozakdenys/qr-code-styling-examples/tree/master/examples/vue)
+The package ships an ES module build (`import`), a CommonJS/UMD build (`require` and `<script>`) and TypeScript types.
 
 ---
 
@@ -223,8 +226,12 @@ You can use this on a node server by passing through the node-canvas or jsdom ob
 
 Calling `getRawData` in node will return a Buffer instead of a Blob.
 
+`canvas` and `jsdom` are not dependencies of this package; install the ones you need (`npm install canvas jsdom`).
+
 ```js
-const { QRCodeStyling } = require("qr-code-styling/lib/qr-code-styling.common.js");
+const QRCodeStyling = require("qr-code-styling-node");
+// The 1.5.0 style import keeps working too:
+// const { QRCodeStyling } = require("qr-code-styling-node/lib/qr-code-styling.common.js");
 const nodeCanvas = require("canvas");
 const { JSDOM } = require("jsdom");
 const fs = require("fs");
@@ -290,5 +297,5 @@ qrCodeSvgWithBlobImage.getRawData("svg").then((buffer) => {
 
 ### License
 
-[MIT License](https://raw.githubusercontent.com/kozakdenys/qr-code-styling/master/LICENSE). Copyright (c) 2021 Denys Kozak
+[MIT License](LICENSE). Copyright (c) 2019 Denys Kozak (original qr-code-styling) and qr-code-styling-node contributors.
 
