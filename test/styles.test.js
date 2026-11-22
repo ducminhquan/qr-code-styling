@@ -15,6 +15,10 @@ const styles = {
   "vertical-lines": { dotsOptions: { type: "vertical-lines" } },
   "horizontal-lines": { dotsOptions: { type: "horizontal-lines" } },
   fluid: { dotsOptions: { type: "fluid", color: "#1d4ed8" } },
+  wave: { dotsOptions: { type: "wave", color: "#0f766e" } },
+  blob: { dotsOptions: { type: "blob", color: "#9333ea" } },
+  circuit: { dotsOptions: { type: "circuit", color: "#15803d" } },
+  "merged SVG paths": { dotsOptions: { type: "classy-rounded" }, svgOptions: { mergePaths: true } },
   "rounded corners": {
     dotsOptions: { type: "rounded" },
     cornersSquareOptions: { type: "rounded" },
@@ -106,5 +110,36 @@ describe("New styles", () => {
   it("refuses a frame that leaves no room for the code", async () => {
     const qrCode = new QRCodeStyling({ data: SHORT, width: 40, height: 40, nodeCanvas, frameOptions: { width: 30 } });
     await expect(qrCode.getRawData("png")).rejects.toThrow(/no room/);
+  });
+
+  describe("svgOptions.mergePaths", () => {
+    const types = [
+      "square",
+      "dots",
+      "rounded",
+      "extra-rounded",
+      "classy",
+      "classy-rounded",
+      "diamond",
+      "vertical-lines",
+      "fluid",
+      "wave",
+      "blob",
+      "circuit"
+    ];
+
+    it.each(types)("draws %s dots as one path, looking the same in a smaller file", async (type) => {
+      const options = { data: LONG, width: 320, height: 320, type: "svg", dotsOptions: { type } };
+      const plain = (await new QRCodeStyling(options).getRawData("svg")).toString();
+      const merged = (
+        await new QRCodeStyling({ ...options, svgOptions: { mergePaths: true } }).getRawData("svg")
+      ).toString();
+      const clip = merged.match(/<clipPath id="clip-path-dot-color">([\s\S]*?)<\/clipPath>/)[1];
+      expect(clip.match(/<(path|rect|circle)\b/g)).toHaveLength(7); // all dots in one path, plus 3 finders x 2 parts
+      expect(merged.length).toBeLessThan(plain.length);
+      const render = (svg) => Buffer.from(new Resvg(QRCodeStyling._normalizeSVGForResvg(svg)).render().asPng());
+      const diff = await diffImages(render(plain), render(merged), 48);
+      expect(diff.ratio).toBe(0);
+    });
   });
 });

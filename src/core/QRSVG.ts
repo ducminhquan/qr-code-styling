@@ -1,10 +1,14 @@
 import calculateImageSize from "../tools/calculateImageSize";
 import errorCorrectionPercents from "../constants/errorCorrectionPercents";
 import QRDot from "../figures/dot/svg/QRDot";
+import QRDotCanvas from "../figures/dot/canvas/QRDot";
+import PathRecorder from "../tools/pathRecorder";
 import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import getQRArea from "../tools/qrArea";
+import { getPluginArea, runAfterDraw } from "../tools/plugins";
+import { getCircleLayout, isCircle } from "../tools/circle";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
 import { roundedRect, toSVGPath } from "../figures/shapes";
@@ -171,6 +175,20 @@ export default class QRSVG {
   }
 
   async drawQR(qr: QRCode): Promise<void> {
+    await this._drawCode(qr);
+    if (this._options.plugins?.length) {
+      await runAfterDraw(this._options, {
+        type: "svg",
+        area: getPluginArea(this._options, qr.getModuleCount()),
+        width: this._options.width,
+        height: this._options.height,
+        svg: this._element,
+        document: this._window.document as unknown as Document
+      });
+    }
+  }
+
+  async _drawCode(qr: QRCode): Promise<void> {
     if (hasFrame(this._options)) {
       this._qr = qr;
       return this._drawFramed(qr);
@@ -268,6 +286,21 @@ export default class QRSVG {
       const color = options.backgroundOptions?.color;
 
       if (gradientOptions || color) {
+        if (isCircle(options)) {
+          const size = Math.min(options.width, options.height);
+          this._createColor({
+            options: gradientOptions,
+            color: color,
+            additionalRotation: 0,
+            x: (options.width - size) / 2,
+            y: (options.height - size) / 2,
+            height: size,
+            width: size,
+            name: "background-color",
+            radius: size / 2
+          });
+          return;
+        }
         this._createColor({
           options: gradientOptions,
           color: color,
@@ -295,12 +328,19 @@ export default class QRSVG {
     }
 
     const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
+    // Round codes draw decorative dots around the code: the dots color covers the whole circle.
+    const colorPad = isCircle(options) ? getCircleLayout(count).pad * dotSize : 0;
     const typeDot = new QRDot({
       svg: this._element,
       type: options.dotsOptions.type,
       window: this._window
     });
     const squareDot = new QRDot({ svg: this._element, type: "square", window: this._window });
+    // svgOptions.mergePaths: draw every dot into one recorded path instead of one element per module.
+    const recorder = options.svgOptions?.mergePaths ? new PathRecorder() : undefined;
+    const recorded = recorder ? (recorder as unknown as CanvasRenderingContext2D) : undefined;
+    const typeDotMerged = recorded ? new QRDotCanvas({ context: recorded, type: options.dotsOptions.type }) : undefined;
+    const squareDotMerged = recorded ? new QRDotCanvas({ context: recorded, type: "square" }) : undefined;
     const solidAlignment = needsSolidAlignment(options.dotsOptions.type);
     const role = solidAlignment ? getModuleRoles(count) : undefined;
 
@@ -312,39 +352,59 @@ export default class QRSVG {
       options: options.dotsOptions?.gradient,
       color: options.dotsOptions.color,
       additionalRotation: 0,
-      x: xBeginning,
-      y: yBeginning,
-      height: count * dotSize,
-      width: count * dotSize,
+      x: xBeginning - colorPad,
+      y: yBeginning - colorPad,
+      height: count * dotSize + 2 * colorPad,
+      width: count * dotSize + 2 * colorPad,
       name: "dot-color",
       imageHref: this._dotsImageHref
     });
 
-    for (let i = 0; i < count; i++) {
-      for (let j = 0; j < count; j++) {
-        if (filter && !filter(i, j)) {
-          continue;
-        }
-        if (!this._qr?.isDark(i, j)) {
+    const circle = isCircle(options) ? getCircleLayout(count) : undefined;
+    const from = circle ? -circle.pad : 0;
+    const to = circle ? count + circle.pad : count;
+    const inCode = (i: number, j: number): boolean => i >= 0 && j >= 0 && i < count && j < count;
+    const isDark = (i: number, j: number): boolean => {
+      if (filter && !filter(i, j)) return false;
+      if (inCode(i, j)) return !!this._qr && this._qr.isDark(i, j);
+      return !!circle && circle.isDecoration(i, j);
+    };
+
+    for (let i = from; i < to; i++) {
+      for (let j = from; j < to; j++) {
+        if (inCode(i, j) ? (filter && !filter(i, j)) || !this._qr?.isDark(i, j) : !isDark(i, j)) {
           continue;
         }
 
-        const dot = role && role(i, j) === "alignment" ? squareDot : typeDot;
+        const alignment = role && inCode(i, j) && role(i, j) === "alignment";
+        const dot = recorded
+          ? ((alignment ? squareDotMerged : typeDotMerged) as QRDotCanvas)
+          : alignment
+            ? squareDot
+            : typeDot;
         dot.draw(
           xBeginning + i * dotSize,
           yBeginning + j * dotSize,
           dotSize,
           (xOffset: number, yOffset: number): boolean => {
-            if (i + xOffset < 0 || j + yOffset < 0 || i + xOffset >= count || j + yOffset >= count) return false;
-            if (filter && !filter(i + xOffset, j + yOffset)) return false;
-            return !!this._qr && this._qr.isDark(i + xOffset, j + yOffset);
+            if (!circle) {
+              if (i + xOffset < 0 || j + yOffset < 0 || i + xOffset >= count || j + yOffset >= count) return false;
+              if (filter && !filter(i + xOffset, j + yOffset)) return false;
+              return !!this._qr && this._qr.isDark(i + xOffset, j + yOffset);
+            }
+            return isDark(i + xOffset, j + yOffset);
           }
         );
 
-        if (dot._element && this._dotsClipPath) {
-          this._dotsClipPath.appendChild(dot._element);
+        if (!recorded && (dot as QRDot)._element && this._dotsClipPath) {
+          this._dotsClipPath.appendChild((dot as QRDot)._element as SVGElement);
         }
       }
+    }
+
+    if (recorder && recorder.d && this._dotsClipPath) {
+      // The canvas renderer fills dots with even-odd; use the same rule so both look the same.
+      this._dotsClipPath.appendChild(this._svgElement("path", { d: recorder.d, "clip-rule": "evenodd" }));
     }
   }
 
@@ -406,6 +466,8 @@ export default class QRSVG {
         if (cornersSquare._element && cornersSquareClipPath) {
           cornersSquareClipPath.appendChild(cornersSquare._element);
         }
+      } else if (options.svgOptions?.mergePaths) {
+        this._drawMergedMask(squareMask, x, y, dotSize, cornersSquareClipPath);
       } else {
         const dot = new QRDot({
           svg: this._element,
@@ -463,6 +525,8 @@ export default class QRSVG {
         if (cornersDot._element && cornersDotClipPath) {
           cornersDotClipPath.appendChild(cornersDot._element);
         }
+      } else if (options.svgOptions?.mergePaths) {
+        this._drawMergedMask(dotMask, x, y, dotSize, cornersDotClipPath);
       } else {
         const dot = new QRDot({
           svg: this._element,
@@ -490,6 +554,25 @@ export default class QRSVG {
         }
       }
     });
+  }
+
+  /** Finder modules drawn with the dots' own figure, as one path (svgOptions.mergePaths). */
+  _drawMergedMask(mask: number[][], x: number, y: number, dotSize: number, clipPath?: SVGElement): void {
+    const recorder = new PathRecorder();
+    const dot = new QRDotCanvas({
+      context: recorder as unknown as CanvasRenderingContext2D,
+      type: this._options.dotsOptions.type
+    });
+    for (let i = 0; i < mask.length; i++) {
+      for (let j = 0; j < mask[i].length; j++) {
+        if (!mask[i]?.[j]) continue;
+        dot.draw(x + i * dotSize, y + j * dotSize, dotSize, (xOffset: number, yOffset: number): boolean => {
+          return !!mask[i + xOffset]?.[j + yOffset];
+        });
+      }
+    }
+    if (recorder.d && clipPath)
+      clipPath.appendChild(this._svgElement("path", { d: recorder.d, "clip-rule": "evenodd" }));
   }
 
   _drawArtRects(rects: ArtRect[]): void {
@@ -624,9 +707,12 @@ export default class QRSVG {
     height,
     width,
     name,
-    imageHref
+    imageHref,
+    radius
   }: {
     imageHref?: string;
+    /** Rounds the rect's corners (a circle when it is half the size). */
+    radius?: number;
     options?: Gradient;
     color?: string;
     additionalRotation: number;
@@ -654,6 +740,10 @@ export default class QRSVG {
     rect.setAttribute("height", String(height));
     rect.setAttribute("width", String(width));
     rect.setAttribute("clip-path", `url('#clip-path-${name}')`);
+    if (radius) {
+      rect.setAttribute("rx", String(radius));
+      rect.setAttribute("ry", String(radius));
+    }
 
     if (options) {
       let gradient: SVGElement;

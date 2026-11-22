@@ -55,4 +55,21 @@ describe.skipIf(!built)("Package entry points", () => {
     expect(pkg.exports["./lib/*"]).toBe("./lib/*");
     expect(fs.existsSync(path.join(lib, "index.d.ts"))).toBe(true);
   });
+
+  it.each(["react", "vue"])(
+    "the %s wrapper is published for require and import, using the core build",
+    async (framework) => {
+      const exportsMap = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).exports[`./${framework}`];
+      for (const file of [exportsMap.types, exportsMap.import, exportsMap.require]) {
+        expect(fs.existsSync(path.join(root, file))).toBe(true);
+      }
+      const cjs = requireFromRoot(path.join(root, exportsMap.require));
+      const esm = await import(pathToFileURL(path.join(root, exportsMap.import)).href);
+      expect(cjs.QRCode).toBeTruthy();
+      expect(esm.QRCode).toBeTruthy();
+      expect(cjs.QRCodeStyling).toBe(requireFromRoot(path.join(lib, "qr-code-styling.js")));
+      // No second copy of the core inside the wrapper.
+      expect(fs.statSync(path.join(root, exportsMap.import)).size).toBeLessThan(10000);
+    }
+  );
 });

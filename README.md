@@ -77,6 +77,41 @@ The package ships an ES module build (`import`), a CommonJS/UMD build (`require`
 
 ---
 
+### React and Vue
+
+The core stays framework-free. Thin wrappers ship in the same package; React and Vue are optional peer dependencies.
+
+```jsx
+import { QRCode } from "qr-code-styling-node/react";
+
+function Poster() {
+  const qr = useRef();
+  return (
+    <>
+      <QRCode ref={qr} options={{ data: "https://example.com", dotsOptions: { type: "fluid" } }} />
+      <button onClick={() => qr.current.download({ extension: "png" })}>Download</button>
+    </>
+  );
+}
+```
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { QRCode } from "qr-code-styling-node/vue";
+const qr = ref();
+const options = ref({ data: "https://example.com", shape: "circle" });
+</script>
+
+<template>
+  <QRCode ref="qr" :options="options" @update="(qrCode) => console.log('drawn', qrCode)" />
+  <button @click="qr.share({ name: 'qr' })">Share</button>
+</template>
+```
+
+Both redraw only when the options really change (a new but equal object does not redraw). The React ref is the
+`QRCodeStyling` instance; the Vue ref exposes `qrCode`, `download`, `share` and `getRawData`.
+
 ### More styles, frames and labels
 
 <img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/style_examples.png" width="720" />
@@ -117,6 +152,25 @@ color     |string                     |white on a frame, else the dots color|Tex
 fontSize  |number                     |7% of the size                      |In px
 fontFamily|string                     |`'Helvetica, Arial, sans-serif'`    |
 fontWeight|string or number           |`'bold'`                            |
+
+### Connected and decorative dots
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/dot_examples.png" width="720" />
+
+`fluid` joins neighbouring dots into soft strokes, `wave` chains each row into soft beads, `blob` gives every
+module its own hand-drawn corners, and `circuit` draws round pads with thin traces to their neighbours. With
+these four, finders and alignment patterns are drawn solid and rounded (unless you set a corner type), so the
+code keeps scanning.
+
+### Smaller SVG files
+
+`svgOptions: { mergePaths: true }` draws all dots as one `<path>` instead of one element per module (and does
+the same for finders drawn with dots). The picture is the same; files are 15-50% smaller and render faster,
+which helps when a page shows many codes.
+
+```js
+new QRCodeStyling({ type: "svg", data: "https://example.com", svgOptions: { mergePaths: true } });
+```
 
 ### QR art
 
@@ -169,6 +223,81 @@ placement |object `{ x, y, size }`          |             |Put the code in this 
 Always check art codes with `verify()` below: a picture with large mid-grey areas or very small modules
 (under about 7 px) may need a higher `contrast`, a larger size or a higher error correction level.
 
+### Round QR codes
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/circle_examples.png" width="720" />
+
+`shape: "circle"` draws a round code. The real code stays square in the middle, with an empty ring around it so
+scanners still find it, and the rest of the circle is filled with decorative dots in the same style. The background
+becomes a circle too. The decoration is the same every time for the same data.
+
+```js
+new QRCodeStyling({ data: "https://example.com", shape: "circle", dotsOptions: { type: "rounded" } });
+```
+
+A round code uses smaller modules than a square one of the same size, so keep it at least ~240 px for short data and
+check it with `verify()`.
+
+### Wi-Fi, contacts, events and more
+
+`QRCodeStyling.payload` (also exported as `payload`) builds the text that phones understand. Pass the result as `data`.
+
+```js
+const { payload } = QRCodeStyling;
+
+payload.wifi({ ssid: "LongChau-Guest", password: "secret" });     // WIFI:T:WPA;S:LongChau-Guest;P:secret;;
+payload.vCard({ firstName: "Quân", lastName: "Nguyễn", phone: "+84900000000", email: "a@example.com" });
+payload.event({ title: "Khai trương", start: "2026-12-01T09:00:00+07:00", end: "2026-12-01T11:00:00+07:00" });
+payload.email({ to: "cskh@example.com", subject: "Hỏi đáp" });
+payload.phone("1800 6928");
+payload.sms({ number: "+84900000000", message: "Xin chào" });
+payload.geo({ latitude: 10.7769, longitude: 106.7009 });
+```
+
+Special characters are escaped for each format. Text outside Latin-1 (Vietnamese, emoji...) is encoded as UTF-8.
+
+### Sharing on phones
+
+`share()` opens the phone's share sheet with the code as an image (Web Share API), so people can send it to a chat
+app or save it to Photos. Where sharing files is not supported, it downloads the file instead.
+
+```js
+const result = await qrCode.share({ name: "wifi", extension: "png", title: "Wi-Fi Long Châu" });
+// "shared", "cancelled" or "downloaded"
+```
+
+### Plugins
+
+A plugin is a plain object with two optional hooks. `configure(options)` returns option changes to merge in before
+drawing. `afterDraw(draw)` draws on top of the finished code, with the canvas context or the SVG element. It gets
+the code's area in pixels (`x`, `y`, `size`, `dotSize`, `count`), and that area accounts for frames.
+
+```js
+const ring = {
+  name: "ring",
+  configure: (options) => (options.margin < 24 ? { margin: 24 } : undefined),
+  afterDraw: ({ type, area, context, svg, document }) => {
+    const cx = area.x + area.size / 2, cy = area.y + area.size / 2, r = area.size * 0.75;
+    if (type === "canvas") {
+      context.beginPath();
+      context.arc(cx, cy, r, 0, Math.PI * 2);
+      context.strokeStyle = "#e11d48";
+      context.stroke();
+    } else {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      Object.entries({ cx, cy, r, fill: "none", stroke: "#e11d48" }).forEach(([k, v]) => circle.setAttribute(k, v));
+      svg.appendChild(circle);
+    }
+  }
+};
+
+new QRCodeStyling({ data: "https://example.com", plugins: [ring] });
+```
+
+Plugins run in order, and async `afterDraw` hooks are awaited. `configure` runs again on every `update()`, so it
+should return the same changes for the same options. Check the result with `verify()` when a plugin draws near
+the code.
+
 ### Checking that a code scans
 
 `verify()` renders the code and decodes it with a QR decoder you pass in, so the library itself stays dependency-free.
@@ -204,6 +333,9 @@ Property               |Type                     |Default Value|Description
 width                  |number                   |`300`        |Size of canvas
 height                 |number                   |`300`        |Size of canvas
 type                   |string (`'canvas' 'svg'`)|`canvas`     |The type of the element that will be rendered
+shape                  |string (`'square' 'circle'`)|`'square'` |`'circle'` draws a round code with decorative dots around the real one
+svgOptions             |object `{ mergePaths }`  |             |SVG only: `mergePaths: true` draws all dots as one path (smaller files)
+plugins                |array                    |             |Plugins with `configure` and `afterDraw` hooks, see [Plugins](#plugins)
 data                   |string                   |             |The date will be encoded to the QR code
 image                  |string                   |             |The image will be copied to the center of the QR code
 margin                 |number                   |`0`          |Margin around canvas
@@ -248,7 +380,7 @@ Property|Type                                                                   
 --------|------------------------------------------------------------------------------|-------------|-------------------
 color   |string                                                                        |`'#000'`     |Color of QR dots
 gradient|object                                                                        |             |Gradient of QR dots
-type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded' 'diamond' 'small-square' 'vertical-lines' 'horizontal-lines' 'fluid'`)|`'square'`   |Style of QR dots. With `diamond`, `small-square` and the lines, corners and alignment patterns stay solid unless you set a corner type. `fluid` joins neighbouring dots into soft strokes, with solid rounded corners
+type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded' 'diamond' 'small-square' 'vertical-lines' 'horizontal-lines' 'fluid' 'wave' 'blob' 'circuit'`)|`'square'`   |Style of QR dots. With `diamond`, `small-square` and the lines, corners and alignment patterns stay solid unless you set a corner type. With `fluid`, `wave`, `blob` and `circuit` they are solid and rounded
 
 `options.backgroundOptions` structure
 
@@ -323,6 +455,15 @@ Param  |Type    |Description
 -------|--------|--------------------------------------------------------------
 decoder|function|A QR decoder with the jsQR signature `(rgba, width, height) => { data } \| null`
 adjust |boolean |For QR art: raise `art.contrast` until the code scans. Default `false`
+
+`QRCodeStyling.share({ name, extension, title, text }) => Promise<'shared' | 'cancelled' | 'downloaded'>`
+
+Param    |Type                                |Default Value|Description
+---------|------------------------------------|-------------|------------
+name     |string                              |`'qr'`       |File name, without extension
+extension|string (`'png' 'jpeg' 'webp' 'svg'`)|`'png'`      |File type
+title    |string                              |             |Title for the share sheet
+text     |string                              |             |Text for the share sheet
 
 `QRCodeStyling.update(options) => void`
 

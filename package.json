@@ -1,6 +1,6 @@
 {
   "name": "qr-code-styling-node",
-  "version": "1.10.0",
+  "version": "1.14.0",
   "description": "Style your QR codes: dots, corners, gradients and a logo. Works in the browser and on Node.js.",
   "keywords": [
     "qr",
@@ -45,6 +45,16 @@
       "require": "./lib/qr-code-styling.js",
       "default": "./lib/qr-code-styling.js"
     },
+    "./react": {
+      "types": "./lib/react/index.d.ts",
+      "import": "./lib/react.mjs",
+      "require": "./lib/react.cjs"
+    },
+    "./vue": {
+      "types": "./lib/vue/index.d.ts",
+      "import": "./lib/vue.mjs",
+      "require": "./lib/vue.cjs"
+    },
     "./lib/*": "./lib/*",
     "./package.json": "./package.json"
   },
@@ -73,15 +83,31 @@
     "bench": "npm run build && node scripts/bench.mjs",
     "art-examples": "npm run build && node scripts/art-examples.mjs",
     "style-examples": "npm run build && node scripts/style-examples.mjs",
-    "blend-examples": "npm run build && node scripts/blend-examples.mjs"
+    "blend-examples": "npm run build && node scripts/blend-examples.mjs",
+    "circle-examples": "npm run build && node scripts/circle-examples.mjs",
+    "dot-examples": "npm run build && node scripts/dot-examples.mjs"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.3"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "vue": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^22.20.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@vitest/coverage-v8": "^2.1.9",
     "canvas": "^3.2.3",
     "esbuild": "^0.24.2",
@@ -94,10 +120,13 @@
     "jsqr": "^1.4.0",
     "prettier": "^3.10.1",
     "qr-code-styling-node-v1-5": "npm:qr-code-styling-node@1.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "ts-loader": "^9.6.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.73.0",
     "vitest": "^2.1.9",
+    "vue": "^3.5.13",
     "webpack": "^5.113.0",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.7",

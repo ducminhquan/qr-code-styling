@@ -8,18 +8,32 @@ import { CornerDotType, CornerSquareType, DotType } from "../types";
 const SOLID_CORNER_DOT_TYPES: DotType[] = ["diamond", "small-square", "vertical-lines", "horizontal-lines"];
 
 /** Dot types with a round look; blend art matches its corners and correction dots to them. */
-export const ROUND_DOT_TYPES: DotType[] = ["dots", "rounded", "extra-rounded", "classy-rounded", "fluid"];
+export const ROUND_DOT_TYPES: DotType[] = [
+  "dots",
+  "rounded",
+  "extra-rounded",
+  "classy-rounded",
+  "fluid",
+  "wave",
+  "blob",
+  "circuit"
+];
 
 /** True when alignment patterns must be drawn as plain squares for this dot type to scan. */
-export const needsSolidAlignment = (type: DotType): boolean => SOLID_CORNER_DOT_TYPES.indexOf(type) !== -1;
+/** Connected or decorative dot types: finders and alignment patterns are drawn solid (and rounded) with them. */
+const SOLID_ROUND_DOT_TYPES: DotType[] = ["fluid", "wave", "blob", "circuit"];
+
+export const needsSolidAlignment = (type: DotType): boolean =>
+  SOLID_ROUND_DOT_TYPES.indexOf(type) !== -1 || SOLID_CORNER_DOT_TYPES.indexOf(type) !== -1;
 
 export default function getCornerTypes(options: RequiredOptions): {
   square?: CornerSquareType;
   dot?: CornerDotType;
 } {
   const type = options.dotsOptions.type;
-  if (options.art?.mode === "blend" || type === "fluid") {
-    // Blend art draws only some of the dots, and fluid dots thin the finder rings, so finders
+  if (options.art?.mode === "blend" || options.shape === "circle" || SOLID_ROUND_DOT_TYPES.indexOf(type) !== -1) {
+    // Blend art draws only some of the dots, round codes surround the finders with decoration, and
+    // fluid dots thin the finder rings, so finders
     // made of dots would not scan well: they are drawn solid, round when the dots are round.
     const round = ROUND_DOT_TYPES.indexOf(type) !== -1;
     return {

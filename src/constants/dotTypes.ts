@@ -11,5 +11,8 @@ export default {
   smallSquare: "small-square",
   verticalLines: "vertical-lines",
   horizontalLines: "horizontal-lines",
-  fluid: "fluid"
+  fluid: "fluid",
+  wave: "wave",
+  blob: "blob",
+  circuit: "circuit"
 } as DotTypes;

@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.14.0
+
+React and Vue wrappers. The core and its output are unchanged.
+
+### Added
+- `qr-code-styling-node/react`: `<QRCode options={...} />`, with a ref to the `QRCodeStyling` instance and an `onUpdate` callback.
+- `qr-code-styling-node/vue`: `<QRCode :options="..." />` for Vue 3, exposing `qrCode`, `download`, `share` and `getRawData`, and emitting `update`.
+- Both redraw only when the options change by value, and import the core build instead of bundling a copy (about 2 KB each). React and Vue are optional peer dependencies.
+
+## 1.13.0
+
+Plugins. Without plugins, output is unchanged.
+
+### Added
+- `plugins` option: each plugin can `configure(options)` (return option changes, merged before drawing) and `afterDraw(draw)` (draw on the canvas context or into the SVG, with the code's area in pixels, frames included). Async hooks are awaited and plugins run in order. Works in the browser and on Node, including the built-in SVG DOM.
+
+## 1.12.0
+
+New dot types and smaller SVG files. Existing options render exactly as before.
+
+### Added
+- Dot types `wave` (rows flow into chains of soft beads), `blob` (each module gets its own hand-drawn corners) and `circuit` (round pads with thin traces to neighbours). Like `fluid`, finders and alignment patterns are drawn solid and rounded unless a corner type is set.
+- `svgOptions.mergePaths`: draws all dots (and finders made of dots) as one SVG path. Same picture, 15-50% smaller files depending on the dot type, faster rendering.
+
+## 1.11.0
+
+Round codes, data builders and sharing. Existing options render exactly as before, except text with characters
+outside Latin-1 (see Fixed).
+
+### Added
+- `shape: "circle"`: a round QR code. The real code stays in the middle with an empty ring around it; the rest of the circle is filled with decorative dots in the same style, and the background is a circle. Finders are drawn solid (rounded with round dot types).
+- `QRCodeStyling.payload` (also a named export `payload`): `wifi`, `vCard`, `event`, `email`, `phone`, `sms` and `geo` build the data string for common QR codes, with each format's escaping.
+- `share()`: opens the phone's share sheet with the code as a file (Web Share API), and downloads it where sharing files is not supported.
+
+### Fixed
+- Text with characters outside Latin-1 (most Vietnamese, emoji, CJK) is now encoded as UTF-8. Before, only the low byte of each character was kept, so these codes read back as the wrong text. Latin-1 text keeps the old encoding, so those codes do not change.
+- `fluid` dots draw alignment patterns as solid squares, which some decorations could otherwise imitate.
+
 ## 1.10.0
 
 Illustration-style QR art. Without the new options, output is unchanged.
