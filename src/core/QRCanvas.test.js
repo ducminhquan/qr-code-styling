@@ -1,3 +1,4 @@
+import { describe, it, beforeAll } from "vitest";
 import fs from "fs";
 import path from "path";
 import qrcode from "qrcode-generator";
@@ -5,6 +6,9 @@ import QRCanvas from "./QRCanvas";
 import modes from "../constants/modes";
 import mergeDeep from "../tools/merge";
 import defaultQRCodeStylingOptions from "./QROptions";
+import { expectSameImage } from "../../test/helpers/image";
+
+const asset = (name) => fs.readFileSync(path.resolve(__dirname, "../assets/test", name));
 
 describe("Test QRCanvas class", () => {
   let qr;
@@ -25,35 +29,24 @@ describe("Test QRCanvas class", () => {
     qr.make();
   });
 
-  it("Should draw simple qr code", () => {
-    const expectedQRCodeFile = fs.readFileSync(path.resolve(__dirname, "../assets/test/simple_qr.png"), "base64");
+  it("Should draw simple qr code", async () => {
+    const expectedQRCodeFile = asset("simple_qr.png");
     const canvas = new QRCanvas(defaultOptions);
 
-    canvas.drawQR(qr);
-    expect(canvas.getCanvas().toDataURL()).toEqual(expect.stringContaining(expectedQRCodeFile));
+    await canvas.drawQR(qr);
+    await expectSameImage(canvas.getCanvas(), expectedQRCodeFile);
   });
-  it("Should draw a qr code with image", done => {
-    const expectedQRCodeFile = fs.readFileSync(
-      path.resolve(__dirname, "../assets/test/simple_qr_with_image.png"),
-      "base64"
-    );
+  it("Should draw a qr code with image", async () => {
+    const expectedQRCodeFile = asset("simple_qr_with_image.png");
     const canvas = new QRCanvas({
       ...defaultOptions,
       image: defaultImage
     });
-    canvas.drawQR(qr);
-    //TODO remove setTimout
-    setTimeout(() => {
-      canvas._image.onload();
-      expect(canvas.getCanvas().toDataURL()).toEqual(expect.stringContaining(expectedQRCodeFile));
-      done();
-    });
+    await canvas.drawQR(qr);
+    await expectSameImage(canvas.getCanvas(), expectedQRCodeFile);
   });
-  it("Should draw a qr code with image margin", done => {
-    const expectedQRCodeFile = fs.readFileSync(
-      path.resolve(__dirname, "../assets/test/simple_qr_with_image_margin.png"),
-      "base64"
-    );
+  it("Should draw a qr code with image margin", async () => {
+    const expectedQRCodeFile = asset("simple_qr_with_image_margin.png");
     const canvas = new QRCanvas({
       ...defaultOptions,
       image: defaultImage,
@@ -62,19 +55,11 @@ describe("Test QRCanvas class", () => {
         margin: 2
       }
     });
-    canvas.drawQR(qr);
-    //TODO remove setTimout
-    setTimeout(() => {
-      canvas._image.onload();
-      expect(canvas.getCanvas().toDataURL()).toEqual(expect.stringContaining(expectedQRCodeFile));
-      done();
-    });
+    await canvas.drawQR(qr);
+    await expectSameImage(canvas.getCanvas(), expectedQRCodeFile);
   });
-  it("Should draw a qr code with image without dots hiding", done => {
-    const expectedQRCodeFile = fs.readFileSync(
-      path.resolve(__dirname, "../assets/test/simple_qr_with_image.png"),
-      "base64"
-    );
+  it("Should draw a qr code with image without dots hiding", async () => {
+    const expectedQRCodeFile = asset("simple_qr_with_image.png");
     const canvas = new QRCanvas({
       ...defaultOptions,
       image: defaultImage,
@@ -83,24 +68,16 @@ describe("Test QRCanvas class", () => {
         hideBackgroundDots: false
       }
     });
-    canvas.drawQR(qr);
-    //TODO remove setTimout
-    setTimeout(() => {
-      canvas._image.onload();
-      expect(canvas.getCanvas().toDataURL()).toEqual(expect.stringContaining(expectedQRCodeFile));
-      done();
-    });
+    await canvas.drawQR(qr);
+    await expectSameImage(canvas.getCanvas(), expectedQRCodeFile);
   });
-  it("Should draw a qr code with margin around canvas", () => {
-    const expectedQRCodeFile = fs.readFileSync(
-      path.resolve(__dirname, "../assets/test/simple_qr_with_margin_canvas.png"),
-      "base64"
-    );
+  it("Should draw a qr code with margin around canvas", async () => {
+    const expectedQRCodeFile = asset("simple_qr_with_margin_canvas.png");
     const canvas = new QRCanvas({
       ...defaultOptions,
       margin: 20
     });
-    canvas.drawQR(qr);
-    expect(canvas.getCanvas().toDataURL()).toEqual(expect.stringContaining(expectedQRCodeFile));
+    await canvas.drawQR(qr);
+    await expectSameImage(canvas.getCanvas(), expectedQRCodeFile);
   });
 });

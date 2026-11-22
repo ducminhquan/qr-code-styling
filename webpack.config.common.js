@@ -1,36 +1,44 @@
 const path = require("path");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
 const rootPath = path.resolve(__dirname, "./");
 const srcPath = path.resolve(rootPath, "src");
 const libPath = path.resolve(rootPath, "lib");
 
-module.exports = {
+const shared = {
   entry: srcPath + "/index.ts",
-  output: {
-    path: libPath,
-    filename: "qr-code-styling.js",
-    library: "QRCodeStyling",
-    libraryTarget: "umd",
-    libraryExport: "default"
-  },
   module: {
     rules: [
       {
         test: /\.ts$/,
         loader: "ts-loader",
-        exclude: /node_modules/
-      },
-      {
-        enforce: "pre",
-        test: /\.ts$/,
-        loader: "eslint-loader",
-        exclude: /node_modules/
+        exclude: /node_modules/,
+        options: { configFile: "tsconfig.json", compilerOptions: { declaration: false, sourceMap: true } }
       }
     ]
   },
-  plugins: [new CleanWebpackPlugin()],
   resolve: {
     extensions: [".ts", ".js"]
   }
 };
+
+// Both bundles keep the exact file names, global name and export shape of
+// qr-code-styling-node@1.5.0 so existing <script> tags and require() calls keep working.
+module.exports = [
+  {
+    ...shared,
+    output: {
+      path: libPath,
+      filename: "qr-code-styling.js",
+      library: { name: "QRCodeStyling", type: "umd", export: "default" },
+      globalObject: "this"
+    }
+  },
+  {
+    ...shared,
+    output: {
+      path: libPath,
+      filename: "qr-code-styling.common.js",
+      library: { name: "QRCodeStyling", type: "commonjs", export: "default" }
+    }
+  }
+];

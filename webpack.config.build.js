@@ -1,17 +1,9 @@
-const commonConfig = require('./webpack.config.common.js');
-const config = commonConfig;
+const commonConfig = require("./webpack.config.common.js");
 
-module.exports = (env, argv) => {
-  config.mode = argv.mode;
-
-  if (argv.mode === "development") {
-    config.devtool = "inline-source-map";
-    config.watch = true;
-  }
-
-  if (argv.mode === "production") {
-    config.devtool = "source-map";
-  }
-
-  return config;
-};
+module.exports = (env, argv) =>
+  commonConfig.map((config) => ({
+    ...config,
+    mode: argv.mode,
+    devtool: argv.mode === "development" ? "inline-source-map" : "source-map",
+    watch: argv.mode === "development"
+  }));
