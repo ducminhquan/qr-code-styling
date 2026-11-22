@@ -23,7 +23,7 @@ export type CornerSquareType = "dot" | "square" | "extra-rounded" | "rounded";
 export type Extension = "svg" | "png" | "jpeg" | "webp";
 export type GradientType = "radial" | "linear";
 export type DrawType = "canvas" | "svg";
-export type ShapeType = "square" | "circle";
+export type ShapeType = "square" | "circle" | "heart" | "hexagon" | "octagon" | "diamond";
 
 export interface Canvas extends HTMLCanvasElement {
   toBuffer?: (type: string) => Buffer;
@@ -223,8 +223,9 @@ export interface LabelOptions {
 export type Options = {
   type?: DrawType;
   /**
-   * "circle": a round QR code. The real code stays square in the middle and the rest of the circle is
-   * filled with decorative dots in the same style; the background becomes a circle. Default "square".
+   * "circle", "heart", "hexagon", "octagon" or "diamond": a shaped QR code. The real code stays square in
+   * the middle and the rest of the shape is filled with decorative dots in the same style; the background
+   * takes the shape. Default "square".
    */
   shape?: ShapeType;
   /** SVG output only. */
