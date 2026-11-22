@@ -9,6 +9,7 @@ import defaultOptions, { RequiredOptions } from "./QROptions";
 import sanitizeOptions from "../tools/sanitizeOptions";
 import { Extension, QRCode, Options, DownloadOptions } from "../types";
 import qrcode from "qrcode-generator";
+import { hasBrowserDom } from "../tools/svgDom";
 
 export default class QRCodeStyling {
   _options: RequiredOptions;
@@ -22,6 +23,11 @@ export default class QRCodeStyling {
   constructor(options?: Partial<Options>) {
     this._options = options ? sanitizeOptions(mergeDeep(defaultOptions, options) as RequiredOptions) : defaultOptions;
     this.update();
+  }
+
+  /** Canvas output needs a browser canvas or node-canvas. */
+  _canUseCanvas(): boolean {
+    return !!this._options.nodeCanvas?.createCanvas || hasBrowserDom();
   }
 
   static _clearContainer(container?: HTMLElement): void {
@@ -48,6 +54,12 @@ export default class QRCodeStyling {
 
       return svg;
     } else {
+      if (!this._canUseCanvas()) {
+        throw new Error(
+          `Rendering "${extension}" outside the browser needs node-canvas (pass { nodeCanvas: require("canvas") }) ` +
+            `or, for png, resvg (pass { resvg: require("@resvg/resvg-js").Resvg }). SVG output needs neither.`
+        );
+      }
       let promise, canvas: QRCanvas;
 
       if (this._canvas && this._canvasDrawingPromise) {
@@ -76,7 +88,13 @@ export default class QRCodeStyling {
     this._qr.addData(this._options.data, this._options.qrOptions.mode || getMode(this._options.data));
     this._qr.make();
 
-    if (this._options.type === drawTypes.canvas) {
+    if (this._options.type === drawTypes.canvas && !this._canUseCanvas()) {
+      // No canvas available (server without node-canvas): draw lazily on getRawData().
+      this._canvas = undefined;
+      this._canvasDrawingPromise = undefined;
+      this._svg = undefined;
+      this._svgDrawingPromise = undefined;
+    } else if (this._options.type === drawTypes.canvas) {
       this._canvas = new QRCanvas(this._options);
       this._canvasDrawingPromise = this._canvas.drawQR(this._qr);
       this._svgDrawingPromise = undefined;
@@ -113,9 +131,80 @@ export default class QRCodeStyling {
     this._container = container;
   }
 
+  static _serializeSVG(svg: QRSVG): string {
+    const serializer = new svg._window.XMLSerializer();
+    return `<?xml version="1.0" standalone="no"?>\r\n${serializer.serializeToString(svg.getElement())}`;
+  }
+
+  async _getSVGString(): Promise<{ svgString: string; svg: QRSVG }> {
+    const svg = (await this._getQRStylingElement("svg")) as QRSVG;
+    return { svgString: QRCodeStyling._serializeSVG(svg), svg };
+  }
+
+  /**
+   * resvg follows the SVG spec more strictly than browsers: it does not accept quoted url('#id')
+   * references, and it hides elements whose clip-path points to a missing id. Browsers ignore both,
+   * so normalize them to get the picture a browser would show. The public SVG output is unchanged.
+   */
+  static _normalizeSVGForResvg(svgString: string): string {
+    const ids = new Set<string>();
+    svgString.replace(/\sid="([^"]+)"/g, (match, id: string) => {
+      ids.add(id);
+      return match;
+    });
+
+    return svgString
+      .replace(/\sclip-path="url\('#([^']+)'\)"/g, (_match, id: string) =>
+        ids.has(id) ? ` clip-path="url(#${id})"` : ""
+      )
+      .replace(/url\('#([^']+)'\)/g, "url(#$1)");
+  }
+
+  async _rasterizeWithResvg(extension: Extension): Promise<Buffer | Uint8Array> {
+    const Resvg = this._options.resvg;
+    if (!Resvg) throw new Error("resvg is not configured");
+    if (extension.toLowerCase() !== "png") {
+      throw new Error(`resvg can only produce png, not "${extension}". Use extension "png" or pass nodeCanvas.`);
+    }
+    // resvg cannot fetch remote images, so embed the logo in the SVG first.
+    const previous = this._options.imageOptions.saveAsBlob;
+    const previousSvg = this._svg;
+    const previousPromise = this._svgDrawingPromise;
+    let svgString: string;
+    try {
+      if (this._options.image && !previous && !this._options.image.startsWith("data:")) {
+        this._options.imageOptions.saveAsBlob = true;
+        this._svg = undefined;
+        this._svgDrawingPromise = undefined;
+      }
+      ({ svgString } = await this._getSVGString());
+    } finally {
+      this._options.imageOptions.saveAsBlob = previous;
+      this._svg = previousSvg;
+      this._svgDrawingPromise = previousPromise;
+    }
+    const png = new Resvg(QRCodeStyling._normalizeSVGForResvg(svgString), { fitTo: { mode: "original" } })
+      .render()
+      .asPng();
+
+    return typeof Buffer !== "undefined" ? Buffer.from(png) : png;
+  }
+
   async getRawData(extension: Extension = "png"): Promise<Blob | Buffer | null> {
     if (!this._qr) throw "QR code is empty";
+
+    if (extension.toLowerCase() !== "svg" && !this._canUseCanvas() && this._options.resvg) {
+      return (await this._rasterizeWithResvg(extension)) as Buffer;
+    }
+
     const element = await this._getQRStylingElement(extension);
+
+    if (extension.toLowerCase() === "svg" && (element as QRSVG)._virtual) {
+      const svgString = QRCodeStyling._serializeSVG(element as QRSVG);
+      return typeof Buffer !== "undefined"
+        ? Buffer.from(svgString)
+        : (new Blob([svgString], { type: "image/svg+xml" }) as Blob);
+    }
 
     if (extension.toLowerCase() === "svg") {
       const serializer = new (element as unknown as QRSVG)._window.XMLSerializer();

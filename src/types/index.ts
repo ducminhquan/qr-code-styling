@@ -126,6 +126,13 @@ export interface QRCode {
   renderTo2dContext(context: CanvasRenderingContext2D, cellSize?: number): void;
 }
 
+export interface ResvgConstructor {
+  new (
+    svg: string | Uint8Array,
+    options?: { fitTo?: { mode: "original" } | { mode: "width"; value: number }; background?: string }
+  ): { render(): { asPng(): Uint8Array } };
+}
+
 export type Options = {
   type?: DrawType;
   width?: number;
@@ -135,6 +142,11 @@ export type Options = {
   image?: string;
   nodeCanvas?: Canvas;
   jsdom?: typeof JSDom;
+  /**
+   * The `Resvg` class from `@resvg/resvg-js`. Lets `getRawData("png")` work on a server without
+   * node-canvas: the QR code is drawn as SVG and rasterized by resvg.
+   */
+  resvg?: ResvgConstructor;
   qrOptions?: {
     typeNumber?: TypeNumber;
     mode?: Mode;

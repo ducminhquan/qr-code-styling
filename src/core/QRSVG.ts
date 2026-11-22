@@ -6,6 +6,8 @@ import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import gradientTypes from "../constants/gradientTypes";
 import { QRCode, FilterFunction, Gradient, Window, Canvas } from "../types";
+import { createVirtualWindow, hasBrowserDom } from "../tools/svgDom";
+import { getImageSize, loadImageData, toDataUrl } from "../tools/imageSize";
 
 declare const window: Window;
 
@@ -41,13 +43,18 @@ export default class QRSVG {
   _qr?: QRCode;
   _image?: HTMLImageElement;
   _imageUri?: string;
+  /** True when no browser DOM or jsdom is available and the built-in virtual DOM is used. */
+  _virtual = false;
 
   //TODO don't pass all options to this class
   constructor(options: RequiredOptions) {
     if (options.jsdom) {
       this._window = new options.jsdom("", { resources: "usable" }).window;
-    } else {
+    } else if (hasBrowserDom()) {
       this._window = window;
+    } else {
+      this._window = createVirtualWindow() as unknown as Window;
+      this._virtual = true;
     }
     this._element = this._window.document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this._element.setAttribute("width", String(options.width));
@@ -55,7 +62,7 @@ export default class QRSVG {
     this._defs = this._window.document.createElementNS("http://www.w3.org/2000/svg", "defs");
     this._element.appendChild(this._defs);
 
-    if (options.imageOptions.saveAsBlob) {
+    if (options.imageOptions.saveAsBlob && !this._virtual) {
       if (options.nodeCanvas?.createCanvas) {
         this._canvas = options.nodeCanvas.createCanvas(options.width, options.height);
       } else {
@@ -396,12 +403,28 @@ export default class QRSVG {
       if (ctx) {
         ctx.drawImage(this._image, 0, 0, this._canvas.width, this._canvas.height);
         this._imageUri = this._canvas.toDataURL("image/png");
-        console.log(this._imageUri);
       }
     }
   }
 
+  async _loadImageWithoutDom(): Promise<void> {
+    const source = this._options.image;
+    if (!source) throw "Image is not defined";
+    const data = await loadImageData(source);
+    const { width, height } = getImageSize(data);
+
+    this._image = { width, height } as HTMLImageElement;
+    if (this._options.imageOptions.saveAsBlob && !source.startsWith("data:")) {
+      // Embed the original bytes so the SVG renders anywhere, without rasterizing a vector logo.
+      this._imageUri = toDataUrl(data);
+    }
+  }
+
   loadImage(): Promise<void> {
+    if (this._virtual) {
+      return this._loadImageWithoutDom();
+    }
+
     return new Promise((resolve, reject) => {
       const options = this._options;
 

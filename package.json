@@ -1,6 +1,6 @@
 {
   "name": "qr-code-styling-node",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Style your QR codes: dots, corners, gradients and a logo. Works in the browser and on Node.js.",
   "keywords": [
     "qr",
@@ -69,13 +69,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "webpack serve --open --config webpack.config.dev-server.js",
-    "clean": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\""
+    "clean": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\"",
+    "bench": "npm run build && node scripts/bench.mjs"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^22.20.5",
     "@vitest/coverage-v8": "^2.1.9",
     "canvas": "^3.2.3",
