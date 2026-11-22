@@ -31,7 +31,7 @@ npm install qr-code-styling-node
 <head>
     <meta charset="UTF-8">
     <title>QR Code Styling</title>
-    <script type="text/javascript" src="https://unpkg.com/qr-code-styling-node@1.6.0/lib/qr-code-styling.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/qr-code-styling-node@1.7.0/lib/qr-code-styling.js"></script>
 </head>
 <body>
 <div id="canvas"></div>
@@ -102,8 +102,9 @@ dotsOptions            |object                   |             |Dots styling opt
 cornersSquareOptions   |object                   |             |Square in the corners styling options
 cornersDotOptionsHelper|object                   |             |Dots in the corners styling options
 backgroundOptions      |object                   |             |QR background styling options
-nodeCanvas             |node-canvas              |             |Only specify when running on a node server for canvas type, please refer to node section below
-jsDom                  |jsdom                    |             |Only specify when running on a node server for svg type, please refer to node section below
+nodeCanvas             |node-canvas              |             |Node only, optional. Needed for canvas output (png, jpeg, webp) on a server, see the Node section below
+jsdom                  |jsdom                    |             |Node only, optional. Not needed for svg any more; still accepted for backward compatibility
+resvg                  |`Resvg` from `@resvg/resvg-js`|        |Node only, optional. Produces png without node-canvas, see the Node section below
 
 `options.qrOptions` structure
 
@@ -222,9 +223,47 @@ name     |string                              |`'qr'`       |Name of the downloa
 extension|string (`'png' 'jpeg' 'webp' 'svg'`)|`'png'`      |File extension
 
 ### Node Support
-You can use this on a node server by passing through the node-canvas or jsdom object depending if your creating a non-svg or svg respectively. You must pass both if using `imageOptions.saveAsBlob`.
 
-Calling `getRawData` in node will return a Buffer instead of a Blob.
+#### SVG with no extra packages
+
+On Node.js, SVG output works out of the box: no `jsdom` and no `canvas` are needed, and it is about
+6 times faster than going through jsdom. `getRawData` returns a Buffer on Node (a Blob where `Buffer` does not exist).
+Other runtimes without a DOM should work the same way, but only Node.js is tested.
+
+```js
+const QRCodeStyling = require("qr-code-styling-node");
+const fs = require("fs");
+
+const qrCode = new QRCodeStyling({
+    type: "svg",
+    data: "https://example.com",
+    image: "https://example.com/logo.png", // data URLs and http(s) URLs work; remote images use fetch
+    dotsOptions: { color: "#4267b2", type: "rounded" },
+    imageOptions: { saveAsBlob: true, margin: 8 } // saveAsBlob embeds the logo inside the SVG
+});
+
+qrCode.getRawData("svg").then((buffer) => fs.writeFileSync("qr.svg", buffer));
+```
+
+#### PNG without node-canvas
+
+`node-canvas` needs native system libraries. If you only need png, install `@resvg/resvg-js` instead
+(prebuilt binaries, nothing to compile) and pass its `Resvg` class:
+
+```js
+const QRCodeStyling = require("qr-code-styling-node");
+const { Resvg } = require("@resvg/resvg-js");
+const fs = require("fs");
+
+const qrCode = new QRCodeStyling({ data: "https://example.com", resvg: Resvg });
+qrCode.getRawData("png").then((buffer) => fs.writeFileSync("qr.png", buffer));
+```
+
+#### With node-canvas (png, jpeg, webp) and jsdom
+
+This is the original 1.5.0 way and keeps working unchanged.
+Pass the node-canvas module for canvas output. Passing `jsdom` for svg is optional now.
+You must pass both if using `imageOptions.saveAsBlob` with jsdom.
 
 `canvas` and `jsdom` are not dependencies of this package; install the ones you need (`npm install canvas jsdom`).
 
