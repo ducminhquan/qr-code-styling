@@ -38,10 +38,12 @@ jobs:
             echo "Release tag $TAG does not match package.json ($VERSION)"
             exit 1
           fi
-      # Trusted Publishing needs npm 11.5.1 or newer.
-      - run: npm install -g npm@latest
+      # Install with the npm that ships with Node: newer npm versions skip dependency install scripts,
+      # which leaves the canvas dev dependency without its native binary and fails the tests.
       - run: npm ci
       - run: npm run typecheck
+      # Trusted Publishing needs npm 11.5.1 or newer.
+      - run: npm install -g npm@latest
       # prepublishOnly runs lint, tests and the build before publishing.
       # Provenance is added automatically with Trusted Publishing.
       - run: npm publish --access public --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
@@ -54,7 +56,7 @@ jobs:
       id-token: write
     strategy:
       max-parallel: 1
-      fail-fast: true
+      fail-fast: false # one version failing does not stop the others
       matrix:
         include:
           - { version: 1.6.0, sha: 0d1bb4f8ff236d3e3c50164cd73436f08641ed15 }
@@ -78,7 +80,6 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: npm install -g npm@latest
       - name: Skip if already on npm
         id: check
         run: |
@@ -96,8 +97,11 @@ jobs:
         run: |
           git checkout --detach "$SHA"
           test "$(node -p "require('./package.json').version")" = "$VERSION"
+      # npm ci with the npm that ships with Node (see the publish job), then the newer npm for publishing.
       - if: steps.check.outputs.published == 'false'
         run: npm ci
+      - if: steps.check.outputs.published == 'false'
+        run: npm install -g npm@latest
       # prepublishOnly runs lint, tests and the build of that version before publishing.
       - if: steps.check.outputs.published == 'false'
         run: npm publish --access public --tag previous
