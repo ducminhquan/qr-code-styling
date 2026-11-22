@@ -4,6 +4,9 @@ name: Publish to npm
 # GitHub Actions, user ducminhquan, repository qr-code-styling, workflow publish.yml.
 # https://docs.npmjs.com/trusted-publishers
 #
+# Versions are staged (npm stage publish), not published directly: approve each one on npmjs.com
+# (or with `npm stage approve <id>`, which asks for 2FA) to make it live.
+#
 # - A published GitHub release (for example tag v2.0.0) publishes that version as "latest".
 # - "Run workflow" (manual) publishes the versions 1.6.0 to 1.14.0 that were never released, oldest first,
 #   from the commit of each version. They get the npm dist-tag "previous", so "latest" is not moved, and
@@ -42,11 +45,13 @@ jobs:
       # which leaves the canvas dev dependency without its native binary and fails the tests.
       - run: npm ci
       - run: npm run typecheck
-      # Trusted Publishing needs npm 11.5.1 or newer.
+      # Trusted Publishing and npm stage need npm 11.15.0 or newer.
       - run: npm install -g npm@latest
-      # prepublishOnly runs lint, tests and the build before publishing.
-      # Provenance is added automatically with Trusted Publishing.
-      - run: npm publish --access public --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+      # Run the checks and build explicitly: npm stage publish may not run prepublishOnly.
+      - run: npm run lint && npm test && npm run build
+      # Staged publishing: the version waits on npmjs.com until a maintainer approves it with 2FA
+      # (npm stage approve <id>, or the website). Needs npm 11.15.0 or newer.
+      - run: npm stage publish --access public --provenance --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
 
   backfill:
     if: github.event_name == 'workflow_dispatch'
@@ -102,9 +107,11 @@ jobs:
         run: npm ci
       - if: steps.check.outputs.published == 'false'
         run: npm install -g npm@latest
-      # prepublishOnly runs lint, tests and the build of that version before publishing.
+      # Lint, tests and build of that version (npm stage publish may not run prepublishOnly).
       - if: steps.check.outputs.published == 'false'
-        run: npm publish --access public --tag previous
+        run: npm run lint && npm test && npm run build
+      - if: steps.check.outputs.published == 'false'
+        run: npm stage publish --access public --provenance --tag previous
       - name: Git tag and GitHub release
         run: |
           if gh release view "v$VERSION" >/dev/null 2>&1; then
