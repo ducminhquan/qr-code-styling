@@ -47,12 +47,12 @@ const ALIGNMENT_POSITIONS: number[][] = [
   [6, 30, 58, 86, 114, 142, 170]
 ];
 
-export type ModuleRole = "finder" | "function" | "data";
+export type ModuleRole = "finder" | "function" | "alignment" | "data";
 
 /** Returns a lookup of module roles for a symbol with `count` modules per side. */
 export default function getModuleRoles(count: number): (row: number, col: number) => ModuleRole {
   const version = (count - 17) / 4;
-  const roles = new Uint8Array(count * count); // 0 data, 1 function, 2 finder
+  const roles = new Uint8Array(count * count); // 0 data, 1 function, 2 finder, 3 alignment
   const mark = (row: number, col: number, role: number): void => {
     if (row >= 0 && col >= 0 && row < count && col < count) roles[row * count + col] = role;
   };
@@ -77,7 +77,7 @@ export default function getModuleRoles(count: number): (row: number, col: number
   positions.forEach((row) =>
     positions.forEach((col) => {
       if (roles[row * count + col] === 2) return;
-      for (let r = -2; r <= 2; r++) for (let c = -2; c <= 2; c++) mark(row + r, col + c, 1);
+      for (let r = -2; r <= 2; r++) for (let c = -2; c <= 2; c++) mark(row + r, col + c, 3);
     })
   );
 
@@ -101,5 +101,5 @@ export default function getModuleRoles(count: number): (row: number, col: number
     }
   }
 
-  return (row, col) => (["data", "function", "finder"] as ModuleRole[])[roles[row * count + col]];
+  return (row, col) => (["data", "function", "finder", "alignment"] as ModuleRole[])[roles[row * count + col]];
 }

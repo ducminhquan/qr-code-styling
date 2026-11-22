@@ -1,4 +1,5 @@
 import dotTypes from "../../../constants/dotTypes";
+import { diamond, line, Shape, smallSquare, toSVGPath } from "../../shapes";
 import { DotType, GetNeighbor, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types";
 
 export default class QRDot {
@@ -33,12 +34,33 @@ export default class QRDot {
       case dotTypes.extraRounded:
         drawFunction = this._drawExtraRounded;
         break;
+      case dotTypes.diamond:
+        drawFunction = (args: DrawArgs) => this._drawShape(diamond(args.x, args.y, args.size));
+        break;
+      case dotTypes.smallSquare:
+        drawFunction = (args: DrawArgs) => this._drawShape(smallSquare(args.x, args.y, args.size));
+        break;
+      case dotTypes.verticalLines:
+      case dotTypes.horizontalLines: {
+        const vertical = type === dotTypes.verticalLines;
+        drawFunction = (args: DrawArgs) => {
+          const before = args.getNeighbor ? args.getNeighbor(vertical ? 0 : -1, vertical ? -1 : 0) : false;
+          const after = args.getNeighbor ? args.getNeighbor(vertical ? 0 : 1, vertical ? 1 : 0) : false;
+          this._drawShape(line(args.x, args.y, args.size, vertical, before, after));
+        };
+        break;
+      }
       case dotTypes.square:
       default:
         drawFunction = this._drawSquare;
     }
 
     drawFunction.call(this, { x, y, size, getNeighbor });
+  }
+
+  _drawShape(shape: Shape): void {
+    this._element = this._window.document.createElementNS("http://www.w3.org/2000/svg", "path");
+    this._element.setAttribute("d", toSVGPath(shape));
   }
 
   _rotateFigure({ x, y, size, rotation = 0, draw }: RotateFigureArgs): void {

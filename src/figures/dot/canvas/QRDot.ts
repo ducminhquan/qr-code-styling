@@ -1,4 +1,5 @@
 import dotTypes from "../../../constants/dotTypes";
+import { diamond, line, Shape, smallSquare, toCanvas } from "../../shapes";
 import {
   DotType,
   GetNeighbor,
@@ -37,12 +38,32 @@ export default class QRDot {
       case dotTypes.extraRounded:
         drawFunction = this._drawExtraRounded;
         break;
+      case dotTypes.diamond:
+        drawFunction = (args: DrawArgsCanvas) => this._drawShape(diamond(args.x, args.y, args.size));
+        break;
+      case dotTypes.smallSquare:
+        drawFunction = (args: DrawArgsCanvas) => this._drawShape(smallSquare(args.x, args.y, args.size));
+        break;
+      case dotTypes.verticalLines:
+      case dotTypes.horizontalLines: {
+        const vertical = type === dotTypes.verticalLines;
+        drawFunction = (args: DrawArgsCanvas) => {
+          const before = args.getNeighbor ? args.getNeighbor(vertical ? 0 : -1, vertical ? -1 : 0) : false;
+          const after = args.getNeighbor ? args.getNeighbor(vertical ? 0 : 1, vertical ? 1 : 0) : false;
+          this._drawShape(line(args.x, args.y, args.size, vertical, before, after));
+        };
+        break;
+      }
       case dotTypes.square:
       default:
         drawFunction = this._drawSquare;
     }
 
     drawFunction.call(this, { x, y, size, context, getNeighbor });
+  }
+
+  _drawShape(shape: Shape): void {
+    toCanvas(this._context, shape);
   }
 
   _rotateFigure({ x, y, size, context, rotation = 0, draw }: RotateFigureArgsCanvas): void {

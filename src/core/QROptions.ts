@@ -20,6 +20,8 @@ export interface RequiredOptions extends Options {
     imageSize: number;
     crossOrigin?: string;
     margin: number;
+    backgroundColor?: string;
+    backgroundRadius?: number;
   };
   dotsOptions: {
     type: DotType;
