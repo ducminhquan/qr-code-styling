@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.0
+
+QR art and scan checking. Without the new options, output is unchanged.
+
+### Added
+- `art` option: blend a picture into the QR code. `halftone` mode redraws the picture as fine pixels around the QR modules (optionally in the picture's colors); `colorize` mode paints the dots, in any dot style, with the picture. Finder, timing, alignment, format and version patterns are kept solid. Works for canvas and SVG output, in the browser and on Node (with node-canvas).
+- `verify({ decoder })`: renders the code and decodes it with a decoder you pass in (for example jsQR), and reports whether it reads back the same data. Works with a canvas, or with resvg on a server.
+- `verify({ decoder, adjust: true })`: for QR art, raises `art.contrast` step by step until the code scans.
+
 ## 1.7.0
 
 Server-side rendering without extra packages. Everything that worked in 1.6.0 works the same.

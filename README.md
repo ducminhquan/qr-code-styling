@@ -31,7 +31,7 @@ npm install qr-code-styling-node
 <head>
     <meta charset="UTF-8">
     <title>QR Code Styling</title>
-    <script type="text/javascript" src="https://unpkg.com/qr-code-styling-node@1.7.0/lib/qr-code-styling.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/qr-code-styling-node@1.8.0/lib/qr-code-styling.js"></script>
 </head>
 <body>
 <div id="canvas"></div>
@@ -77,6 +77,57 @@ The package ships an ES module build (`import`), a CommonJS/UMD build (`require`
 
 ---
 
+### QR art
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/art_examples.png" width="720" />
+
+Blend a picture into the code with `art`. Two modes:
+
+- `halftone` (default): the picture is redrawn as fine pixels, with each QR module kept in the middle. Use `colored: true` to keep the picture's colors.
+- `colorize`: dots keep their shape (any `dotsOptions.type`) and are painted with a darkened copy of the picture, over a light copy of it.
+
+```js
+const qrCode = new QRCodeStyling({
+    data: "https://example.com",
+    qrOptions: { errorCorrectionLevel: "H" }, // recommended for art
+    art: { image: "https://example.com/photo.jpg", mode: "halftone", colored: true },
+    imageOptions: { crossOrigin: "anonymous" } // the picture must be readable by a canvas
+});
+```
+
+QR art reads the picture's pixels, so it needs a canvas: it works as is in the browser, and on Node it needs
+`nodeCanvas`. Pictures from another origin need CORS (`crossOrigin`), or the browser will block reading them.
+
+`art` structure
+
+Property  |Type                              |Default Value|Description
+----------|----------------------------------|-------------|------------------------------------------------------------
+image     |string                            |             |The picture (URL or data URL). Required
+mode      |string (`'halftone' 'colorize'`)  |`'halftone'` |How the picture is blended in
+colored   |boolean                           |`false`      |halftone: use the picture's colors instead of dots/background colors
+background|boolean                           |`true`       |colorize: show a light copy of the picture behind the dots
+contrast  |number (`0 - 1`)                  |`0.5` halftone, `0.7` colorize|Higher is easier to scan but shows less of the picture
+crossOrigin|string                          |             |Overrides `imageOptions.crossOrigin` for the picture
+
+### Checking that a code scans
+
+`verify()` renders the code and decodes it with a QR decoder you pass in, so the library itself stays dependency-free.
+It works with any decoder that has the [jsQR](https://www.npmjs.com/package/jsqr) signature.
+
+```js
+import jsQR from "jsqr";
+
+const result = await qrCode.verify({ decoder: jsQR });
+// { readable: true, decoded: "https://example.com", attempts: 1 }
+
+// For QR art: raise art.contrast step by step until the code scans, and keep that setting.
+const tuned = await qrCode.verify({ decoder: jsQR, adjust: true });
+// { readable: true, decoded: "...", contrast: 0.8, attempts: 3 }
+```
+
+On Node, `verify()` needs `nodeCanvas` or `resvg` to draw the code. A decoder succeeding is a good sign, not a
+guarantee: phone cameras are usually more forgiving than jsQR, but print size, light and screen glare matter too.
+
 ### API Documentation
 
 #### QRCodeStyling instance
@@ -105,6 +156,7 @@ backgroundOptions      |object                   |             |QR background st
 nodeCanvas             |node-canvas              |             |Node only, optional. Needed for canvas output (png, jpeg, webp) on a server, see the Node section below
 jsdom                  |jsdom                    |             |Node only, optional. Not needed for svg any more; still accepted for backward compatibility
 resvg                  |`Resvg` from `@resvg/resvg-js`|        |Node only, optional. Produces png without node-canvas, see the Node section below
+art                    |object                   |             |Blend a picture into the code, see "QR art" above
 
 `options.qrOptions` structure
 
@@ -200,6 +252,13 @@ container|DOM element|This container will be used for appending of the QR code
 Param    |Type                                |Default Value|Description
 ---------|------------------------------------|-------------|------------
 extension|string (`'png' 'jpeg' 'webp' 'svg'`)|`'png'`      |Blob type on browser, Buffer type on Node
+
+`QRCodeStyling.verify({ decoder, adjust }) => Promise<{ readable, decoded, contrast, attempts }>`
+
+Param  |Type    |Description
+-------|--------|--------------------------------------------------------------
+decoder|function|A QR decoder with the jsQR signature `(rgba, width, height) => { data } \| null`
+adjust |boolean |For QR art: raise `art.contrast` until the code scans. Default `false`
 
 `QRCodeStyling.update(options) => void`
 

@@ -130,7 +130,50 @@ export interface ResvgConstructor {
   new (
     svg: string | Uint8Array,
     options?: { fitTo?: { mode: "original" } | { mode: "width"; value: number }; background?: string }
-  ): { render(): { asPng(): Uint8Array } };
+  ): { render(): { asPng(): Uint8Array; pixels: Uint8Array; width: number; height: number } };
+}
+
+export type ArtMode = "halftone" | "colorize";
+
+export interface ArtOptions {
+  /** The picture to blend into the QR code (URL or data URL). */
+  image: string;
+  /**
+   * "halftone": the picture is redrawn as fine black/white (or colored) pixels, with the QR modules in the middle.
+   * "colorize": the dots keep their shape and are painted with a darkened copy of the picture.
+   */
+  mode?: ArtMode;
+  /** halftone only: use the picture's own colors instead of dotsOptions/backgroundOptions colors. */
+  colored?: boolean;
+  /** colorize only: also show a light copy of the picture behind the dots. Default true. */
+  background?: boolean;
+  /** 0 to 1. Higher keeps dark and light further apart: easier to scan, less of the picture. Default 0.5 (halftone), 0.7 (colorize). */
+  contrast?: number;
+  crossOrigin?: string;
+}
+
+/** Same signature as jsQR: (rgba, width, height) => { data } | null. */
+export type QRDecoder = (
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  options?: Record<string, unknown>
+) => { data: string } | null;
+
+export interface VerifyOptions {
+  /** A QR decoder, for example `jsQR` from the "jsqr" package. */
+  decoder: QRDecoder;
+  /** For QR art: raise art.contrast step by step until the code scans. Default false. */
+  adjust?: boolean;
+}
+
+export interface VerifyResult {
+  readable: boolean;
+  /** Text the decoder read, if any. */
+  decoded?: string;
+  /** Final art.contrast when art is used. */
+  contrast?: number;
+  attempts: number;
 }
 
 export type Options = {
@@ -147,6 +190,8 @@ export type Options = {
    * node-canvas: the QR code is drawn as SVG and rasterized by resvg.
    */
   resvg?: ResvgConstructor;
+  /** Blend a picture into the QR code. Needs a canvas (browser, or nodeCanvas on Node). */
+  art?: ArtOptions;
   qrOptions?: {
     typeNumber?: TypeNumber;
     mode?: Mode;

@@ -4,6 +4,7 @@ import QRDot from "../figures/dot/canvas/QRDot";
 import QRCornerSquare from "../figures/cornerSquare/canvas/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/canvas/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
+import { prepareArt, PreparedArt, ArtRect } from "../art/art";
 import gradientTypes from "../constants/gradientTypes";
 import { QRCode, Gradient, FilterFunction, Canvas } from "../types";
 
@@ -32,6 +33,8 @@ export default class QRCanvas {
   _options: RequiredOptions;
   _qr?: QRCode;
   _image?: HTMLImageElement;
+  /** Fill used for the dots instead of their color (QR art "colorize"). */
+  _dotsFill?: CanvasPattern;
 
   //TODO don't pass all options to this class
   constructor(options: RequiredOptions) {
@@ -98,9 +101,7 @@ export default class QRCanvas {
       });
     }
 
-    this.clear();
-    this.drawBackground();
-    this.drawDots((i: number, j: number): boolean => {
+    const filter = (i: number, j: number): boolean => {
       if (this._options.imageOptions.hideBackgroundDots) {
         if (
           i >= (count - drawImageSize.hideXDots) / 2 &&
@@ -121,7 +122,28 @@ export default class QRCanvas {
       }
 
       return true;
-    });
+    };
+
+    let art: PreparedArt | undefined;
+    if (this._options.art) {
+      art = await prepareArt(this._options, qr, filter);
+    }
+
+    this.clear();
+    this.drawBackground();
+    if (art?.mode === "halftone") {
+      this._drawArtRects(art.rects);
+      // No regular dots, but set up the dots color so corners without their own color use it.
+      this.drawDots(() => false);
+    } else {
+      if (art?.mode === "colorize") {
+        const context = this.context as CanvasRenderingContext2D;
+        if (art.background) context.drawImage(art.background as unknown as CanvasImageSource, 0, 0);
+        this._dotsFill = context.createPattern(art.dots as unknown as CanvasImageSource, "no-repeat") ?? undefined;
+      }
+      this.drawDots(filter);
+      this._dotsFill = undefined;
+    }
     this.drawCorners();
 
     if (this._options.image) {
@@ -224,7 +246,20 @@ export default class QRCanvas {
       canvasContext.fillStyle = canvasContext.strokeStyle = options.dotsOptions.color;
     }
 
+    if (this._dotsFill) {
+      canvasContext.fillStyle = canvasContext.strokeStyle = this._dotsFill;
+    }
+
     canvasContext.fill("evenodd");
+  }
+
+  _drawArtRects(rects: ArtRect[]): void {
+    const context = this.context;
+    if (!context) return;
+    rects.forEach(({ x, y, width, height, color }) => {
+      context.fillStyle = color;
+      context.fillRect(x, y, width, height);
+    });
   }
 
   drawCorners(filter?: FilterFunction): void {
