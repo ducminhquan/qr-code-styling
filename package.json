@@ -1,7 +1,7 @@
 {
   "name": "qr-code-styling-node",
-  "version": "2.0.1",
-  "description": "Style your QR codes: dots, corners, gradients and a logo. Works in the browser and on Node.js.",
+  "version": "2.1.0",
+  "description": "Style your QR codes: dots, corners, gradients and a logo. Works in the browser and on Node.js, with VietQR, GS1 Digital Link, scan checks and printable sheets.",
   "keywords": [
     "qr",
     "qrcode",
@@ -20,7 +20,14 @@
     "node",
     "svg",
     "canvas",
-    "server-side"
+    "server-side",
+    "vietqr",
+    "gs1",
+    "digital-link",
+    "batch",
+    "print",
+    "pdf",
+    "cli"
   ],
   "homepage": "https://github.com/ducminhquan/qr-code-styling#readme",
   "bugs": {
@@ -38,6 +45,9 @@
   "main": "lib/qr-code-styling.js",
   "module": "lib/qr-code-styling.mjs",
   "types": "lib/index.d.ts",
+  "bin": {
+    "qr-code-styling-node": "lib/cli.cjs"
+  },
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
@@ -54,6 +64,11 @@
       "types": "./lib/vue/index.d.ts",
       "import": "./lib/vue.mjs",
       "require": "./lib/vue.cjs"
+    },
+    "./print": {
+      "types": "./lib/print/index.d.ts",
+      "import": "./lib/print.mjs",
+      "require": "./lib/print.cjs"
     },
     "./lib/*": "./lib/*",
     "./package.json": "./package.json"
@@ -86,7 +101,8 @@
     "blend-examples": "npm run build && node scripts/blend-examples.mjs",
     "circle-examples": "npm run build && node scripts/circle-examples.mjs",
     "dot-examples": "npm run build && node scripts/dot-examples.mjs",
-    "playground": "npm run build && node scripts/build-playground.mjs"
+    "playground": "npm run build && node scripts/build-playground.mjs",
+    "retail-examples": "npm run build && node scripts/retail-examples.mjs"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.3"

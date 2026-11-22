@@ -1,7 +1,13 @@
 /**
- * Builders for the data of common QR codes: Wi-Fi, contact card, calendar event, e-mail, phone, SMS and
- * location. They only return a string, to pass as `data`.
+ * Builders for the data of common QR codes: Wi-Fi, contact card, calendar event, e-mail, phone, SMS,
+ * location, VietQR bank transfer and GS1 Digital Link. They only return a string, to pass as `data`.
  */
+import { vietQR, vietQRBanks } from "../payloads/vietqr";
+import { gs1 } from "../payloads/gs1";
+
+export type { VietQROptions } from "../payloads/vietqr";
+export type { GS1Options } from "../payloads/gs1";
+export { vietQR, vietQRBanks, gs1 };
 
 export interface WifiOptions {
   ssid: string;
@@ -114,4 +120,4 @@ export const sms = ({ number, message }: { number: string; message?: string }): 
 export const geo = ({ latitude, longitude }: { latitude: number; longitude: number }): string =>
   `geo:${latitude},${longitude}`;
 
-export default { wifi, vCard, event, email, phone, sms, geo };
+export default { wifi, vCard, event, email, phone, sms, geo, vietQR, vietQRBanks, gs1 };

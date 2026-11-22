@@ -22,7 +22,8 @@ the result and copy the code.
 - **Framework-free and light.** One dependency (`qrcode-generator`). React and Vue wrappers are optional.
 - **Pretty out of the box.** 14 dot styles, rounded corners, gradients, logos, frames, labels, round codes and QR art.
 - **Runs anywhere.** Browser canvas or SVG; on Node, SVG works with no extra packages, PNG with `resvg` or `node-canvas`.
-- **Checks itself.** `verify()` decodes the result so you know a styled code still scans.
+- **Checks itself.** `check()` flags low contrast, big logos and tiny prints instantly; `verify()` decodes the result so you know a styled code still scans.
+- **Ready for shops.** VietQR bank transfers, GS1 Digital Link product codes, and printable label sheets (PDF) from a CSV file, in code or with `npx`.
 - **Backward compatible.** Code written for 1.5.0 (or for the original `qr-code-styling`) keeps working and draws the same picture. New behaviour is always opt-in.
 
 `qr-code-styling-node` is an independently maintained project. It started as a fork of
@@ -36,7 +37,9 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed. Found a bug or have an idea?
 - [Quick start](#quick-start): [browser](#in-the-browser), [bundler / TypeScript](#with-a-bundler-or-typescript), [React and Vue](#react-and-vue), [Node.js](#on-nodejs)
 - Guides: [dots and corners](#dots-and-corners), [frames and labels](#frames-and-labels), [round codes](#round-codes),
   [QR art](#qr-art), [Wi-Fi, contacts and events](#wi-fi-contacts-events-and-more), [download and share](#download-and-share),
-  [checking that a code scans](#checking-that-a-code-scans), [smaller SVG files](#smaller-svg-files), [plugins](#plugins)
+  [VietQR payments](#vietqr-bank-transfers), [GS1 product codes](#gs1-digital-link-product-codes),
+  [checking that a code scans](#checking-that-a-code-scans), [printing many codes](#printing-many-codes),
+  [command line](#command-line), [smaller SVG files](#smaller-svg-files), [plugins](#plugins)
 - [API reference](#api-reference)
 - [Upgrading from 1.5.0](#upgrading-from-150)
 - [Development](#development)
@@ -291,6 +294,51 @@ payload.geo({ latitude: 10.7769, longitude: 106.7009 });
 Special characters are escaped as each format requires. Any text with accents (Vietnamese, French, emoji,
 CJK) is encoded as UTF-8, which is what scanners expect.
 
+### VietQR bank transfers
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/retail_examples.png" width="720" />
+
+A VietQR payment code, two GS1 product labels and a product page link, laid out with
+[`sheet()`](#printing-many-codes) (`npm run retail-examples`).
+
+`payload.vietQR()` builds the NAPAS VietQR code that every Vietnamese banking app scans (EMVCo format, with its
+checksum). Leave out `amount` for a static code the payer fills in; with `amount` the app fills it for them.
+
+```js
+payload.vietQR({
+  bank: "VCB",                         // short name from payload.vietQRBanks, or the 6-digit NAPAS BIN "970436"
+  account: "0011001234567",
+  amount: 150000,                      // VND, optional
+  message: "Thanh toán đơn LC123"      // accents are removed: banks expect plain text
+});
+// "00020101021238570010A000000727...6304XXXX"
+
+payload.vietQR({ bank: "970422", account: "9704221234567890", type: "card" }); // to a card number
+```
+
+`payload.vietQRBanks` lists the BINs of common banks (VCB, CTG, BIDV, AGRIBANK, TCB, MB, ACB, VPB, TPB, STB,
+HDB, VIB, SHB, OCB, MSB, SEAB, EIB, LPB, NAB). For other banks pass the BIN from the NAPAS list. Always scan a
+new payment code with a banking app before printing it.
+
+### GS1 Digital Link product codes
+
+`payload.gs1()` builds a [GS1 Digital Link](https://www.gs1.org/standards/gs1-digital-link): one QR code on the
+pack that tills read as the GTIN (with batch and expiry) and phones open as a web page.
+
+```js
+payload.gs1({ gtin: "8935049500131", lot: "A12", expiry: "2027-06-30" });
+// "https://id.gs1.org/01/08935049500131/10/A12?17=270630"
+
+payload.gs1({
+  gtin: "8935049500131",
+  serial: "000123",
+  domain: "https://qr.example.vn",     // your own resolver, so the phone opens your product page
+  extra: { "3103": "000500" }          // any other GS1 application identifier
+});
+```
+
+The GTIN's check digit is verified. `expiry` and `bestBefore` take a `Date`, `"YYYY-MM-DD"` or `"YYMMDD"`.
+
 ### Download and share
 
 ```js
@@ -305,6 +353,24 @@ const blob = await qrCode.getRawData("png"); // Blob in the browser, Buffer on N
 ```
 
 ### Checking that a code scans
+
+`check()` looks for the usual reasons a styled code does not scan, without drawing or decoding anything: low
+contrast between dots and background (every gradient stop and corner color is checked), light dots on a dark
+background, a logo too large for the error correction level, a missing quiet zone, modules too small on screen
+or in print, and codes too dense. It is synchronous and works everywhere.
+
+```js
+const result = qrCode.check({ printWidthMm: 25 }); // or QRCodeStyling.check(options, { printWidthMm: 25 })
+// {
+//   ok: false,                       // false when there is an "error"
+//   issues: [{ level: "error", code: "low-contrast", message: "Code colors and background are too close ..." }],
+//   version: 4, modules: 33, moduleSize: 9, moduleSizeMm: 0.76, contrast: 1.6
+// }
+```
+
+Levels are `"error"` (likely will not scan), `"warning"` (may fail on some phones or prints) and `"info"`
+(depends on where the code is placed). `printWidthMm` is the printed width of the whole image; add
+`scanDistanceMm` (default 200) to check the size for the distance people will scan from.
 
 `verify()` renders the code and decodes it with a decoder you pass in, so the library itself stays
 dependency-free. Any decoder with the [jsQR](https://www.npmjs.com/package/jsqr) signature works.
@@ -322,6 +388,60 @@ await qrCode.verify({ decoder: jsQR, adjust: true });
 
 On Node, `verify()` needs `nodeCanvas` or `resvg` to draw the code. A decoder succeeding is a good sign, not a
 guarantee: phone cameras are usually more forgiving than jsQR, but print size, light and glare matter too.
+
+### Printing many codes
+
+`qr-code-styling-node/print` lays codes out on pages for shelf labels, price tags or product stickers, as SVG or as
+a PDF ready to print. Every code gets its own ids, so gradients and logos of different codes never mix.
+
+```js
+import { pdf, sheet, parseCSV, fillTemplate } from "qr-code-styling-node/print";
+import { Resvg } from "@resvg/resvg-js"; // on a server; not needed in the browser
+
+const products = parseCSV(fs.readFileSync("products.csv", "utf8")); // Excel exports with ; , or tabs work
+const items = products.map((p) => ({
+  data: fillTemplate("https://shop.example.vn/p/{sku}", p),
+  caption: `${p.name} ${p.price}`
+}));
+
+const bytes = await pdf(items, {
+  template: { dotsOptions: { type: "rounded", color: "#1250dc" }, image: logo }, // shared by every code
+  page: "A4",           // A4, A5, A6, letter or { widthMm, heightMm }; orientation: "landscape"
+  sizeMm: 30,           // printed width of each code
+  gapMm: 5,
+  marginMm: 10,
+  cutLines: true,       // thin lines to cut labels apart
+  dpi: 300,
+  resvg: Resvg          // or nodeCanvas: require("canvas")
+});
+fs.writeFileSync("labels.pdf", bytes);
+
+const pages = await sheet(items, { sizeMm: 30 }); // one SVG string per page, sized in mm
+```
+
+Each item can override any option of the template (for example its own logo). Captions shrink to fit the code
+width. The PDF holds one image per page at `dpi`; for vector output use the SVG pages.
+
+### Command line
+
+The same features without writing code. PNG and PDF need `@resvg/resvg-js` (or `canvas`) installed.
+
+```sh
+# one code
+npx qr-code-styling-node --data "https://example.com" -c style.json -o qr.svg
+npx qr-code-styling-node --payload vietqr --set bank=VCB --set account=0011001234567 --set amount=50000 -o pay.png
+
+# one file per CSV row, named by a column
+npx qr-code-styling-node --csv products.csv --data-template "https://shop.example.vn/p/{sku}" --name "{sku}" -o out/ -f png
+
+# a printable PDF of GS1 product codes (columns gtin, lot, expiry), with captions and a scan check
+npx qr-code-styling-node --csv products.csv --payload gs1 --caption "{name} {price}" \
+  --sheet --code-size 25 --cut-lines --check -o labels.pdf
+```
+
+`-c style.json` takes the same options as `new QRCodeStyling()`. `--payload` accepts `vietqr`, `gs1`, `wifi`,
+`vcard`, `email`, `phone`, `sms` and `geo`, with fields from CSV columns or `--set key=value`. `--check` prints
+problems and exits with code 1 when one is an error. `npx qr-code-styling-node --help` lists every option.
 
 ### Smaller SVG files
 
@@ -492,12 +612,15 @@ Method                                         |Returns                         
 `download({ name = 'qr', extension = 'png' })` |`Promise<void>`                               |Saves the file in the browser
 `share({ name, extension, title, text })`      |`Promise<'shared' \| 'cancelled' \| 'downloaded'>`|Share sheet on phones, download elsewhere
 `verify({ decoder, adjust })`                  |`Promise<{ readable, decoded, contrast, attempts }>`|Decodes the result, see [checking](#checking-that-a-code-scans)
+`check({ printWidthMm, scanDistanceMm })`      |`{ ok, issues, version, modules, moduleSize, contrast }`|Quick scan problems without decoding; also `QRCodeStyling.check(options)`
 
 ### Named exports
 
 `payload` (data builders), `dotTypes`, `cornerSquareTypes`, `cornerDotTypes`, `errorCorrectionLevels`,
 `errorCorrectionPercents`, `modes`, `qrTypes`, `drawTypes`, and TypeScript types such as `Options`, `QRPlugin`,
-`WifiOptions`, `VCardOptions` and `EventOptions`.
+`WifiOptions`, `VCardOptions`, `EventOptions`, `VietQROptions`, `GS1Options` and `CheckResult`.
+
+`qr-code-styling-node/print` exports `sheet`, `pdf`, `parseCSV`, `fillTemplate`, `pageSize` and `embedSVG`.
 
 ## Upgrading from 1.5.0
 

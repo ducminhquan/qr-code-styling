@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.1.0
+
+Tools for shops: payment and product codes, a scan check, and printing many codes. Existing options draw
+exactly the same picture.
+
+### Added
+- `payload.vietQR({ bank, account, amount, message })`: the NAPAS VietQR bank transfer code (EMVCo format with
+  CRC), static or with an amount, to an account or a card. `payload.vietQRBanks` maps short bank names to BINs.
+- `payload.gs1({ gtin, lot, serial, expiry })`: a GS1 Digital Link URL for products, with GTIN check-digit validation.
+- `check()` and `QRCodeStyling.check(options)`: finds low contrast, inverted colors, oversized logos, missing quiet
+  zone, small modules (on screen or in print with `printWidthMm`) and dense codes, without decoding.
+- `qr-code-styling-node/print`: `sheet()` lays codes out on pages (A4, A5, A6, letter or custom, with captions and
+  cut lines) as SVG; `pdf()` makes a print-ready PDF with resvg, node-canvas or the browser. Also `parseCSV()` for
+  Excel/Sheets exports and `fillTemplate()`.
+- Command line: `npx qr-code-styling-node` writes one code, one file per CSV row, or a PDF/SVG sheet, with
+  `--payload`, `--check` and every option from a JSON file.
+- Playground: VietQR and GS1 content types, and `check()` results shown as you edit.
+
 ## 2.0.1
 
 ### Fixed

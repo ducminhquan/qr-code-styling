@@ -10,7 +10,8 @@ import drawTypes from "./constants/drawTypes";
 import payload from "./tools/payloads";
 
 export * from "./types";
-export type { WifiOptions, VCardOptions, EventOptions } from "./tools/payloads";
+export type { CheckIssue, CheckLevel, CheckOptions, CheckResult } from "./tools/check";
+export type { WifiOptions, VCardOptions, EventOptions, VietQROptions, GS1Options } from "./tools/payloads";
 
 export {
   dotTypes,

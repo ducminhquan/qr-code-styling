@@ -72,4 +72,20 @@ describe.skipIf(!built)("Package entry points", () => {
       expect(fs.statSync(path.join(root, exportsMap.import)).size).toBeLessThan(10000);
     }
   );
+
+  it("publishes the print subpath and the command line", async () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    const exportsMap = pkg.exports["./print"];
+    for (const file of [exportsMap.types, exportsMap.import, exportsMap.require]) {
+      expect(fs.existsSync(path.join(root, file))).toBe(true);
+    }
+    const cjs = requireFromRoot(path.join(root, exportsMap.require));
+    const esm = await import(pathToFileURL(path.join(root, exportsMap.import)).href);
+    expect(typeof cjs.pdf).toBe("function");
+    expect(typeof esm.sheet).toBe("function");
+    // No second copy of the core inside print.
+    expect(fs.statSync(path.join(root, exportsMap.import)).size).toBeLessThan(30000);
+    const bin = path.join(root, pkg.bin["qr-code-styling-node"]);
+    expect(fs.readFileSync(bin, "utf8").startsWith("#!/usr/bin/env node")).toBe(true);
+  });
 });

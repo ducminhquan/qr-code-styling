@@ -123,6 +123,8 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 .status.ok { color: var(--ok); }
 .status.bad .dot { background: var(--bad); }
 .status.bad { color: var(--bad); }
+.status.warn .dot { background: #b26b00; }
+.status.warn { color: #b26b00; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .row select { width: auto; }
 pre {
@@ -307,7 +309,15 @@ pre {
     phone: { label: "Phone", fields: [["number", "Number", "text", "+84 90 123 4567"]],
       build: function (v) { return { data: payload.phone(v.number), code: "payload.phone(" + JSON.stringify(v.number) + ")" }; } },
     sms: { label: "SMS", fields: [["number", "Number", "text", "+84 90 123 4567"], ["message", "Message", "text", "Hi!"]],
-      build: function (v) { var o = clean(v); return { data: payload.sms(o), code: "payload.sms(" + js(o) + ")" }; } }
+      build: function (v) { var o = clean(v); return { data: payload.sms(o), code: "payload.sms(" + js(o) + ")" }; } },
+    vietqr: { label: "VietQR", fields: [["bank", "Bank (short name or BIN)", "text", "VCB"],
+      ["account", "Account number", "text", "0011001234567"], ["amount", "Amount (VND, optional)", "text", "50000"],
+      ["message", "Description", "text", "Thanh toán đơn LC123"]],
+      build: function (v) { var o = clean(v); return { data: payload.vietQR(o), code: "payload.vietQR(" + js(o) + ")" }; } },
+    gs1: { label: "GS1 product", fields: [["gtin", "GTIN (barcode number)", "text", "8935049500131"],
+      ["lot", "Batch / lot", "text", "A12"], ["expiry", "Expiry (YYYY-MM-DD)", "text", "2027-06-30"],
+      ["domain", "Your resolver (optional)", "url", ""]],
+      build: function (v) { var o = clean(v); return { data: payload.gs1(o), code: "payload.gs1(" + js(o) + ")" }; } }
   };
   var kind = "text";
   var kindValues = {};
@@ -392,7 +402,12 @@ pre {
   }
 
   function collect() {
-    var content = KINDS[kind].build(kindValues[kind] || {});
+    var content;
+    try {
+      content = KINDS[kind].build(kindValues[kind] || {});
+    } catch (err) {
+      content = { data: " ", code: '" "', error: String(err && err.message ? err.message : err) };
+    }
     var size = num("size") || 300;
     var o = { type: $("drawType").value, width: size, height: size, data: content.data || " ", margin: num("margin") || 0,
       qrOptions: { errorCorrectionLevel: $("ecl").value } };
@@ -435,7 +450,7 @@ pre {
       o.art = { image: art, mode: mode, contrast: Number($("artContrast").value) };
       if (mode === "halftone" && $("artColored").checked) o.art.colored = true;
     }
-    return { options: o, dataCode: content.code };
+    return { options: o, dataCode: content.code, error: content.error };
   }
 
   // ---- Code output ----------------------------------------------------------------------------
@@ -481,6 +496,7 @@ pre {
   function schedule() { clearTimeout(timer); timer = setTimeout(render, 120); }
 
   function setStatus(cls, text) {
+    $("status").title = "";
     $("status").className = "status" + (cls ? " " + cls : "");
     $("statusText").textContent = text;
   }
@@ -505,7 +521,7 @@ pre {
       } else {
         qr.update(current.options);
       }
-      setStatus("", "Not checked yet");
+      showCheck();
     } catch (err) {
       setStatus("bad", "Can’t draw this: " + (err && err.message ? err.message : err));
     }
@@ -513,6 +529,18 @@ pre {
     document.querySelectorAll(".grad-dot").forEach(function (el) { el.classList.toggle("hidden", !$("dotGrad").checked); });
     document.querySelectorAll(".frame").forEach(function (el) { el.classList.toggle("hidden", !$("frameOn").checked); });
     ["csColor", "cdColor"].forEach(function (id) { $(id).closest("label").classList.toggle("hidden", $("cornersFollow").checked); });
+  }
+
+  // Quick checks that need no decoder: contrast, logo size, quiet zone, module size.
+  function showCheck() {
+    if (current.error) { setStatus("bad", current.error); return; }
+    var result = qr.check();
+    var serious = result.issues.filter(function (i) { return i.level !== "info"; });
+    if (!serious.length) { setStatus("", "No problems found. Use “Check it scans” to be sure."); return; }
+    var first = serious[0];
+    setStatus(first.level === "error" ? "bad" : "warn",
+      first.message + (serious.length > 1 ? " (+" + (serious.length - 1) + " more)" : ""));
+    $("status").title = serious.map(function (i) { return i.level + ": " + i.message; }).join("\n");
   }
 
   $("verify").addEventListener("click", function () {
