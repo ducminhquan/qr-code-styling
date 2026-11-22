@@ -118,6 +118,25 @@ fontSize  |number                     |7% of the size                      |In p
 fontFamily|string                     |`'Helvetica, Arial, sans-serif'`    |
 fontWeight|string or number           |`'bold'`                            |
 
+### Connected and decorative dots
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/dot_examples.png" width="720" />
+
+`fluid` joins neighbouring dots into soft strokes, `wave` chains each row into soft beads, `blob` gives every
+module its own hand-drawn corners, and `circuit` draws round pads with thin traces to their neighbours. With
+these four, finders and alignment patterns are drawn solid and rounded (unless you set a corner type), so the
+code keeps scanning.
+
+### Smaller SVG files
+
+`svgOptions: { mergePaths: true }` draws all dots as one `<path>` instead of one element per module (and does
+the same for finders drawn with dots). The picture is the same; files are 15-50% smaller and render faster,
+which helps when a page shows many codes.
+
+```js
+new QRCodeStyling({ type: "svg", data: "https://example.com", svgOptions: { mergePaths: true } });
+```
+
 ### QR art
 
 <img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/art_examples.png" width="720" />
@@ -248,6 +267,7 @@ width                  |number                   |`300`        |Size of canvas
 height                 |number                   |`300`        |Size of canvas
 type                   |string (`'canvas' 'svg'`)|`canvas`     |The type of the element that will be rendered
 shape                  |string (`'square' 'circle'`)|`'square'` |`'circle'` draws a round code with decorative dots around the real one
+svgOptions             |object `{ mergePaths }`  |             |SVG only: `mergePaths: true` draws all dots as one path (smaller files)
 data                   |string                   |             |The date will be encoded to the QR code
 image                  |string                   |             |The image will be copied to the center of the QR code
 margin                 |number                   |`0`          |Margin around canvas
@@ -292,7 +312,7 @@ Property|Type                                                                   
 --------|------------------------------------------------------------------------------|-------------|-------------------
 color   |string                                                                        |`'#000'`     |Color of QR dots
 gradient|object                                                                        |             |Gradient of QR dots
-type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded' 'diamond' 'small-square' 'vertical-lines' 'horizontal-lines' 'fluid'`)|`'square'`   |Style of QR dots. With `diamond`, `small-square` and the lines, corners and alignment patterns stay solid unless you set a corner type. `fluid` joins neighbouring dots into soft strokes, with solid rounded corners
+type    |string (`'rounded' 'dots' 'classy' 'classy-rounded' 'square' 'extra-rounded' 'diamond' 'small-square' 'vertical-lines' 'horizontal-lines' 'fluid' 'wave' 'blob' 'circuit'`)|`'square'`   |Style of QR dots. With `diamond`, `small-square` and the lines, corners and alignment patterns stay solid unless you set a corner type. With `fluid`, `wave`, `blob` and `circuit` they are solid and rounded
 
 `options.backgroundOptions` structure
 

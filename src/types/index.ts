@@ -14,7 +14,10 @@ export type DotType =
   | "small-square"
   | "vertical-lines"
   | "horizontal-lines"
-  | "fluid";
+  | "fluid"
+  | "wave"
+  | "blob"
+  | "circuit";
 export type CornerDotType = "dot" | "square" | "rounded";
 export type CornerSquareType = "dot" | "square" | "extra-rounded" | "rounded";
 export type Extension = "svg" | "png" | "jpeg" | "webp";
@@ -224,6 +227,11 @@ export type Options = {
    * filled with decorative dots in the same style; the background becomes a circle. Default "square".
    */
   shape?: ShapeType;
+  /** SVG output only. */
+  svgOptions?: {
+    /** Draw all dots as one path instead of one element per module: smaller files, faster rendering. Default false. */
+    mergePaths?: boolean;
+  };
   width?: number;
   height?: number;
   margin?: number;

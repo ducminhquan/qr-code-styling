@@ -1,5 +1,5 @@
 import dotTypes from "../../../constants/dotTypes";
-import { diamond, fluid, line, Shape, smallSquare, toCanvas } from "../../shapes";
+import { blob, circuit, diamond, fluid, line, wave, Shape, smallSquare, toCanvas } from "../../shapes";
 import {
   DotType,
   GetNeighbor,
@@ -54,11 +54,17 @@ export default class QRDot {
         };
         break;
       }
+      case dotTypes.blob:
+        drawFunction = (args: DrawArgsCanvas) => this._drawShape(blob(args.x, args.y, args.size));
+        break;
+      case dotTypes.wave:
+      case dotTypes.circuit:
       case dotTypes.fluid:
         drawFunction = (args: DrawArgsCanvas) => {
           const has = (dx: number, dy: number): boolean => (args.getNeighbor ? args.getNeighbor(dx, dy) : false);
+          const shapeOf = type === dotTypes.wave ? wave : type === dotTypes.circuit ? circuit : fluid;
           this._drawShape(
-            fluid(args.x, args.y, args.size, {
+            shapeOf(args.x, args.y, args.size, {
               left: has(-1, 0),
               right: has(1, 0),
               top: has(0, -1),

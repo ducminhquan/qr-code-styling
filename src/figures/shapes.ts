@@ -177,3 +177,125 @@ export const fluid = (
   shape.push({ op: "Z" });
   return shape;
 };
+
+type Neighbors = { left: boolean; right: boolean; top: boolean; bottom: boolean };
+
+/**
+ * Clockwise arc from (x0, y0) to (x1, y1) that bulges by `sagitta` to the left of the direction of travel
+ * (outwards for a clockwise outline).
+ */
+const bulgeArc = (x0: number, y0: number, x1: number, y1: number, sagitta: number): PathCommand => {
+  const chord = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+  const r = (chord * chord) / (8 * sagitta) + sagitta / 2;
+  // Unit normal pointing to the left of travel in screen coordinates (y down) is (dy, -dx).
+  const nx = (y1 - y0) / chord;
+  const ny = -(x1 - x0) / chord;
+  const cx = (x0 + x1) / 2 - nx * (r - sagitta);
+  const cy = (y0 + y1) / 2 - ny * (r - sagitta);
+  return { op: "A", cx, cy, r, start: Math.atan2(y0 - cy, x0 - cx), end: Math.atan2(y1 - cy, x1 - cx) };
+};
+
+/**
+ * "wave" dot: modules in a row flow into each other as a chain of soft beads; a run's ends are round.
+ * Only horizontal neighbours connect.
+ */
+export const wave = (x: number, y: number, size: number, { left, right }: Neighbors): Shape => {
+  const half = size * 0.3;
+  const bulge = size * 0.1;
+  const cy = y + size / 2;
+  const x0 = left ? x : x + half;
+  const x1 = right ? x + size : x + size - half;
+  const shape: Shape = [{ op: "M", x: x0, y: cy - half }];
+  shape.push(bulgeArc(x0, cy - half, x1, cy - half, bulge));
+  if (right) shape.push({ op: "L", x: x1, y: cy + half });
+  else shape.push({ op: "A", cx: x1, cy, r: half, start: -Math.PI / 2, end: Math.PI / 2 });
+  shape.push(bulgeArc(x1, cy + half, x0, cy + half, bulge));
+  if (left) shape.push({ op: "L", x: x0, y: cy - half });
+  else shape.push({ op: "A", cx: x0, cy, r: half, start: Math.PI / 2, end: (3 * Math.PI) / 2 });
+  shape.push({ op: "Z" });
+  return shape;
+};
+
+/** Small deterministic noise from a position, in [0, 1). */
+const noise = (a: number, b: number, salt: number): number => {
+  let h = Math.imul(Math.round(a * 16) + 0x9e37, 0x27d4eb2d) ^ Math.imul(Math.round(b * 16) + salt, 0x165667b1);
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+  h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
+};
+
+/** "blob" dot: a hand-drawn looking rounded square; each module gets its own corner radii and size. */
+export const blob = (x: number, y: number, size: number): Shape => {
+  const inset = size * (0.03 + 0.07 * noise(x, y, 1));
+  const left = x + inset;
+  const top = y + inset;
+  const side = size - 2 * inset;
+  const radius = (k: number): number => side * (0.25 + 0.25 * noise(x, y, k + 2));
+  const [tl, tr, br, bl] = [radius(0), radius(1), radius(2), radius(3)];
+  return [
+    { op: "M", x: left + tl, y: top },
+    { op: "L", x: left + side - tr, y: top },
+    { op: "A", cx: left + side - tr, cy: top + tr, r: tr, start: -Math.PI / 2, end: 0 },
+    { op: "L", x: left + side, y: top + side - br },
+    { op: "A", cx: left + side - br, cy: top + side - br, r: br, start: 0, end: Math.PI / 2 },
+    { op: "L", x: left + bl, y: top + side },
+    { op: "A", cx: left + bl, cy: top + side - bl, r: bl, start: Math.PI / 2, end: Math.PI },
+    { op: "L", x: left, y: top + tl },
+    { op: "A", cx: left + tl, cy: top + tl, r: tl, start: Math.PI, end: (3 * Math.PI) / 2 },
+    { op: "Z" }
+  ];
+};
+
+/**
+ * "circuit" dot: a round pad with thin traces to its dark neighbours, like a printed circuit board.
+ * One outline per module, so traces never overlap the pad (the renderers fill with even-odd).
+ */
+export const circuit = (x: number, y: number, size: number, neighbors: Neighbors): Shape => {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const r = size * 0.36;
+  const w = size * 0.17; // half the trace width
+  const alpha = Math.asin(w / r);
+  const arms = [
+    { on: neighbors.top, angle: -Math.PI / 2 },
+    { on: neighbors.right, angle: 0 },
+    { on: neighbors.bottom, angle: Math.PI / 2 },
+    { on: neighbors.left, angle: Math.PI }
+  ].filter((arm) => arm.on);
+
+  if (!arms.length) {
+    return [
+      { op: "M", x: cx + r, y: cy },
+      { op: "A", cx, cy, r, start: 0, end: Math.PI },
+      { op: "A", cx, cy, r, start: Math.PI, end: 2 * Math.PI },
+      { op: "Z" }
+    ];
+  }
+
+  const point = (angle: number): { x: number; y: number } => ({
+    x: cx + r * Math.cos(angle),
+    y: cy + r * Math.sin(angle)
+  });
+  // Moves a point on the pad out to the cell edge, along the arm's direction.
+  const toEdge = (angle: number, at: { x: number; y: number }): { x: number; y: number } => {
+    const reach = size / 2 - r * Math.cos(alpha);
+    return { x: at.x + reach * Math.cos(angle), y: at.y + reach * Math.sin(angle) };
+  };
+
+  const first = point(arms[0].angle + alpha);
+  const shape: Shape = [{ op: "M", x: first.x, y: first.y }];
+  for (let k = 0; k < arms.length; k++) {
+    const from = arms[k].angle + alpha;
+    const next = arms[(k + 1) % arms.length];
+    let to = next.angle - alpha;
+    if (k === arms.length - 1 || to <= from) to += 2 * Math.PI;
+    if (to - from > 1e-6) shape.push({ op: "A", cx, cy, r, start: from, end: to });
+    const a = point(next.angle - alpha);
+    const b = point(next.angle + alpha);
+    const ea = toEdge(next.angle, a);
+    const eb = toEdge(next.angle, b);
+    shape.push({ op: "L", x: ea.x, y: ea.y }, { op: "L", x: eb.x, y: eb.y }, { op: "L", x: b.x, y: b.y });
+  }
+  shape.push({ op: "Z" });
+  return shape;
+};

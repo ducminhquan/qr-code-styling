@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.0
+
+New dot types and smaller SVG files. Existing options render exactly as before.
+
+### Added
+- Dot types `wave` (rows flow into chains of soft beads), `blob` (each module gets its own hand-drawn corners) and `circuit` (round pads with thin traces to neighbours). Like `fluid`, finders and alignment patterns are drawn solid and rounded unless a corner type is set.
+- `svgOptions.mergePaths`: draws all dots (and finders made of dots) as one SVG path. Same picture, 15-50% smaller files depending on the dot type, faster rendering.
+
 ## 1.11.0
 
 Round codes, data builders and sharing. Existing options render exactly as before, except text with characters

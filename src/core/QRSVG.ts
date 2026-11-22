@@ -1,6 +1,8 @@
 import calculateImageSize from "../tools/calculateImageSize";
 import errorCorrectionPercents from "../constants/errorCorrectionPercents";
 import QRDot from "../figures/dot/svg/QRDot";
+import QRDotCanvas from "../figures/dot/canvas/QRDot";
+import PathRecorder from "../tools/pathRecorder";
 import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
@@ -319,6 +321,11 @@ export default class QRSVG {
       window: this._window
     });
     const squareDot = new QRDot({ svg: this._element, type: "square", window: this._window });
+    // svgOptions.mergePaths: draw every dot into one recorded path instead of one element per module.
+    const recorder = options.svgOptions?.mergePaths ? new PathRecorder() : undefined;
+    const recorded = recorder ? (recorder as unknown as CanvasRenderingContext2D) : undefined;
+    const typeDotMerged = recorded ? new QRDotCanvas({ context: recorded, type: options.dotsOptions.type }) : undefined;
+    const squareDotMerged = recorded ? new QRDotCanvas({ context: recorded, type: "square" }) : undefined;
     const solidAlignment = needsSolidAlignment(options.dotsOptions.type);
     const role = solidAlignment ? getModuleRoles(count) : undefined;
 
@@ -354,7 +361,12 @@ export default class QRSVG {
           continue;
         }
 
-        const dot = role && inCode(i, j) && role(i, j) === "alignment" ? squareDot : typeDot;
+        const alignment = role && inCode(i, j) && role(i, j) === "alignment";
+        const dot = recorded
+          ? ((alignment ? squareDotMerged : typeDotMerged) as QRDotCanvas)
+          : alignment
+            ? squareDot
+            : typeDot;
         dot.draw(
           xBeginning + i * dotSize,
           yBeginning + j * dotSize,
@@ -369,10 +381,15 @@ export default class QRSVG {
           }
         );
 
-        if (dot._element && this._dotsClipPath) {
-          this._dotsClipPath.appendChild(dot._element);
+        if (!recorded && (dot as QRDot)._element && this._dotsClipPath) {
+          this._dotsClipPath.appendChild((dot as QRDot)._element as SVGElement);
         }
       }
+    }
+
+    if (recorder && recorder.d && this._dotsClipPath) {
+      // The canvas renderer fills dots with even-odd; use the same rule so both look the same.
+      this._dotsClipPath.appendChild(this._svgElement("path", { d: recorder.d, "clip-rule": "evenodd" }));
     }
   }
 
@@ -434,6 +451,8 @@ export default class QRSVG {
         if (cornersSquare._element && cornersSquareClipPath) {
           cornersSquareClipPath.appendChild(cornersSquare._element);
         }
+      } else if (options.svgOptions?.mergePaths) {
+        this._drawMergedMask(squareMask, x, y, dotSize, cornersSquareClipPath);
       } else {
         const dot = new QRDot({
           svg: this._element,
@@ -491,6 +510,8 @@ export default class QRSVG {
         if (cornersDot._element && cornersDotClipPath) {
           cornersDotClipPath.appendChild(cornersDot._element);
         }
+      } else if (options.svgOptions?.mergePaths) {
+        this._drawMergedMask(dotMask, x, y, dotSize, cornersDotClipPath);
       } else {
         const dot = new QRDot({
           svg: this._element,
@@ -518,6 +539,25 @@ export default class QRSVG {
         }
       }
     });
+  }
+
+  /** Finder modules drawn with the dots' own figure, as one path (svgOptions.mergePaths). */
+  _drawMergedMask(mask: number[][], x: number, y: number, dotSize: number, clipPath?: SVGElement): void {
+    const recorder = new PathRecorder();
+    const dot = new QRDotCanvas({
+      context: recorder as unknown as CanvasRenderingContext2D,
+      type: this._options.dotsOptions.type
+    });
+    for (let i = 0; i < mask.length; i++) {
+      for (let j = 0; j < mask[i].length; j++) {
+        if (!mask[i]?.[j]) continue;
+        dot.draw(x + i * dotSize, y + j * dotSize, dotSize, (xOffset: number, yOffset: number): boolean => {
+          return !!mask[i + xOffset]?.[j + yOffset];
+        });
+      }
+    }
+    if (recorder.d && clipPath)
+      clipPath.appendChild(this._svgElement("path", { d: recorder.d, "clip-rule": "evenodd" }));
   }
 
   _drawArtRects(rects: ArtRect[]): void {
