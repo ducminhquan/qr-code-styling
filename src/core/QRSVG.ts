@@ -4,6 +4,7 @@ import QRDot from "../figures/dot/svg/QRDot";
 import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
+import getQRArea from "../tools/qrArea";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
 import { roundedRect, toSVGPath } from "../figures/shapes";
@@ -52,6 +53,8 @@ export default class QRSVG {
   _virtual = false;
   /** Image used to paint the dots instead of their color (QR art "colorize"). */
   _dotsImageHref?: string;
+  /** Per-finder colors used when corners have no color of their own (QR art "blend"). */
+  _finderColors?: string[];
 
   //TODO don't pass all options to this class
   constructor(options: RequiredOptions, sharedWindow?: Window) {
@@ -173,8 +176,7 @@ export default class QRSVG {
       return this._drawFramed(qr);
     }
     const count = qr.getModuleCount();
-    const minSize = Math.min(this._options.width, this._options.height) - this._options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
+    const { dotSize } = getQRArea(this._options, count);
     let drawImageSize = {
       hideXDots: 0,
       hideYDots: 0,
@@ -232,7 +234,12 @@ export default class QRSVG {
 
     this.clear();
     this.drawBackground();
-    if (art?.mode === "halftone") {
+    if (art?.mode === "blend") {
+      this._appendImage(art.picture.toDataURL("image/png"), 0, 0);
+      this._drawArtRects(art.rects);
+      this.drawDots(() => false);
+      this._finderColors = art.finderColors;
+    } else if (art?.mode === "halftone") {
       this._drawArtRects(art.rects);
       // No regular dots, but set up the dots color so corners without their own color use it.
       this.drawDots(() => false);
@@ -245,6 +252,7 @@ export default class QRSVG {
       this._dotsImageHref = undefined;
     }
     this.drawCorners();
+    this._finderColors = undefined;
 
     if (this._options.image) {
       this.drawImage({ width: drawImageSize.width, height: drawImageSize.height, count, dotSize });
@@ -286,10 +294,7 @@ export default class QRSVG {
       throw "The canvas is too small.";
     }
 
-    const minSize = Math.min(options.width, options.height) - options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
-    const xBeginning = Math.floor((options.width - count * dotSize) / 2);
-    const yBeginning = Math.floor((options.height - count * dotSize) / 2);
+    const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
     const typeDot = new QRDot({
       svg: this._element,
       type: options.dotsOptions.type,
@@ -356,25 +361,22 @@ export default class QRSVG {
     }
 
     const count = this._qr.getModuleCount();
-    const minSize = Math.min(options.width, options.height) - options.margin * 2;
-    const dotSize = Math.floor(minSize / count);
+    const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
     const cornersSquareSize = dotSize * 7;
     const cornersDotSize = dotSize * 3;
     const cornerTypes = getCornerTypes(options);
-    const xBeginning = Math.floor((options.width - count * dotSize) / 2);
-    const yBeginning = Math.floor((options.height - count * dotSize) / 2);
 
     [
       [0, 0, 0],
       [1, 0, Math.PI / 2],
       [0, 1, -Math.PI / 2]
-    ].forEach(([column, row, rotation]) => {
+    ].forEach(([column, row, rotation], index) => {
       const x = xBeginning + column * dotSize * (count - 7);
       const y = yBeginning + row * dotSize * (count - 7);
       let cornersSquareClipPath = this._dotsClipPath;
       let cornersDotClipPath = this._dotsClipPath;
 
-      if (options.cornersSquareOptions?.gradient || options.cornersSquareOptions?.color) {
+      if (options.cornersSquareOptions?.gradient || options.cornersSquareOptions?.color || this._finderColors) {
         cornersSquareClipPath = this._window.document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
         cornersSquareClipPath.setAttribute("id", `clip-path-corners-square-color-${column}-${row}`);
         this._defs.appendChild(cornersSquareClipPath);
@@ -382,7 +384,7 @@ export default class QRSVG {
 
         this._createColor({
           options: options.cornersSquareOptions?.gradient,
-          color: options.cornersSquareOptions?.color,
+          color: options.cornersSquareOptions?.color ?? this._finderColors?.[index],
           additionalRotation: rotation,
           x,
           y,
@@ -431,7 +433,7 @@ export default class QRSVG {
         }
       }
 
-      if (options.cornersDotOptions?.gradient || options.cornersDotOptions?.color) {
+      if (options.cornersDotOptions?.gradient || options.cornersDotOptions?.color || this._finderColors) {
         cornersDotClipPath = this._window.document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
         cornersDotClipPath.setAttribute("id", `clip-path-corners-dot-color-${column}-${row}`);
         this._defs.appendChild(cornersDotClipPath);
@@ -439,7 +441,7 @@ export default class QRSVG {
 
         this._createColor({
           options: options.cornersDotOptions?.gradient,
-          color: options.cornersDotOptions?.color,
+          color: options.cornersDotOptions?.color ?? this._finderColors?.[index],
           additionalRotation: rotation,
           x: x + dotSize * 2,
           y: y + dotSize * 2,
@@ -491,14 +493,12 @@ export default class QRSVG {
   }
 
   _drawArtRects(rects: ArtRect[]): void {
-    rects.forEach(({ x, y, width, height, color }) => {
-      const rect = this._window.document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("x", String(x));
-      rect.setAttribute("y", String(y));
-      rect.setAttribute("width", String(width));
-      rect.setAttribute("height", String(height));
-      rect.setAttribute("fill", color);
-      this._element.appendChild(rect);
+    rects.forEach(({ x, y, width, height, color, shape }) => {
+      this._element.appendChild(
+        shape === "circle"
+          ? this._svgElement("circle", { cx: x + width / 2, cy: y + height / 2, r: width / 2, fill: color })
+          : this._svgElement("rect", { x, y, width, height, fill: color })
+      );
     });
   }
 
@@ -589,8 +589,7 @@ export default class QRSVG {
     dotSize: number;
   }): void {
     const options = this._options;
-    const xBeginning = Math.floor((options.width - count * dotSize) / 2);
-    const yBeginning = Math.floor((options.height - count * dotSize) / 2);
+    const { x: xBeginning, y: yBeginning } = getQRArea(options, count);
     const dx = xBeginning + options.imageOptions.margin + (count * dotSize - width) / 2;
     const dy = yBeginning + options.imageOptions.margin + (count * dotSize - height) / 2;
     const dw = width - options.imageOptions.margin * 2;

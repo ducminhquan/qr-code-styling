@@ -1,5 +1,5 @@
 import dotTypes from "../../../constants/dotTypes";
-import { diamond, line, Shape, smallSquare, toSVGPath } from "../../shapes";
+import { diamond, fluid, line, Shape, smallSquare, toSVGPath } from "../../shapes";
 import { DotType, GetNeighbor, DrawArgs, BasicFigureDrawArgs, RotateFigureArgs, Window } from "../../../types";
 
 export default class QRDot {
@@ -50,6 +50,19 @@ export default class QRDot {
         };
         break;
       }
+      case dotTypes.fluid:
+        drawFunction = (args: DrawArgs) => {
+          const has = (dx: number, dy: number): boolean => (args.getNeighbor ? args.getNeighbor(dx, dy) : false);
+          this._drawShape(
+            fluid(args.x, args.y, args.size, {
+              left: has(-1, 0),
+              right: has(1, 0),
+              top: has(0, -1),
+              bottom: has(0, 1)
+            })
+          );
+        };
+        break;
       case dotTypes.square:
       default:
         drawFunction = this._drawSquare;

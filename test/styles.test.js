@@ -14,6 +14,7 @@ const styles = {
   "small-square": { dotsOptions: { type: "small-square" } },
   "vertical-lines": { dotsOptions: { type: "vertical-lines" } },
   "horizontal-lines": { dotsOptions: { type: "horizontal-lines" } },
+  fluid: { dotsOptions: { type: "fluid", color: "#1d4ed8" } },
   "rounded corners": {
     dotsOptions: { type: "rounded" },
     cornersSquareOptions: { type: "rounded" },

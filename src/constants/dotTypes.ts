@@ -10,5 +10,6 @@ export default {
   diamond: "diamond",
   smallSquare: "small-square",
   verticalLines: "vertical-lines",
-  horizontalLines: "horizontal-lines"
+  horizontalLines: "horizontal-lines",
+  fluid: "fluid"
 } as DotTypes;

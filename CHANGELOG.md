@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.10.0
+
+Illustration-style QR art. Without the new options, output is unchanged.
+
+### Added
+- `art.mode: "blend"`: the picture fills the whole image and dots are drawn only where it is not already dark or light enough for the code. Finders take a dark color from the picture and sit on a light plate; alignment patterns stay whole. Round dot types give round (`rounded`) finders.
+- `art.placement: { x, y, size }`: put the code in one square of a larger picture.
+- Dot type `fluid`: neighbouring dots join into soft strokes and a lone dot is a circle. Finders are drawn solid and rounded unless a corner type is set.
+
 ## 1.9.0
 
 More styles, frames and labels. Existing options render exactly as before.
