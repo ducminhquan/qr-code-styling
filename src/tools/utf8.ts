@@ -19,8 +19,12 @@ export default function toUTF8Bytes(text: string): number[] {
   return bytes;
 }
 
-/** True when the text has characters outside Latin-1, which byte mode cannot hold as single bytes. */
-export const needsUTF8 = (text: string): boolean => {
-  for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) > 0xff) return true;
+/**
+ * True when the text should be written as UTF-8: any non-ASCII character by default, or with
+ * encoding "latin1" only characters outside Latin-1 (which cannot be one byte each).
+ */
+export const needsUTF8 = (text: string, encoding: "utf-8" | "latin1" = "utf-8"): boolean => {
+  const limit = encoding === "latin1" ? 0xff : 0x7f;
+  for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) > limit) return true;
   return false;
 };

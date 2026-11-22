@@ -256,6 +256,11 @@ export type Options = {
     typeNumber?: TypeNumber;
     mode?: Mode;
     errorCorrectionLevel?: ErrorCorrectionLevel;
+    /**
+     * How text with accents is written. "utf-8" (default): any non-ASCII text is UTF-8.
+     * "latin1": Latin-1 text (é, à, ê...) is one byte per character as in 1.x; other text is still UTF-8.
+     */
+    encoding?: "utf-8" | "latin1";
   };
   imageOptions?: {
     saveAsBlob?: boolean;

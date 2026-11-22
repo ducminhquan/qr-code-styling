@@ -97,9 +97,9 @@ export default class QRCodeStyling {
 
     this._qr = qrcode(this._options.qrOptions.typeNumber, this._options.qrOptions.errorCorrectionLevel);
     const data = this._options.data;
-    if (needsUTF8(data)) {
-      // Text outside Latin-1 (Vietnamese, emoji...) is encoded as UTF-8, which scanners expect.
-      // Latin-1 text keeps the old one-byte-per-character encoding, so existing codes do not change.
+    if (needsUTF8(data, this._options.qrOptions.encoding)) {
+      // Non-ASCII text (accents, Vietnamese, emoji...) is encoded as UTF-8, which scanners expect.
+      // qrOptions.encoding "latin1" keeps the 1.x one-byte-per-character encoding for Latin-1 text.
       const generator = qrcode as unknown as { stringToBytes: (text: string) => number[] };
       const latin1 = generator.stringToBytes;
       generator.stringToBytes = toUTF8Bytes;
