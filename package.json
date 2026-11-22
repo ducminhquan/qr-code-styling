@@ -1,6 +1,6 @@
 {
   "name": "qr-code-styling-node",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "Style your QR codes: dots, corners, gradients and a logo. Works in the browser and on Node.js.",
   "keywords": [
     "qr",
@@ -73,7 +73,8 @@
     "bench": "npm run build && node scripts/bench.mjs",
     "art-examples": "npm run build && node scripts/art-examples.mjs",
     "style-examples": "npm run build && node scripts/style-examples.mjs",
-    "blend-examples": "npm run build && node scripts/blend-examples.mjs"
+    "blend-examples": "npm run build && node scripts/blend-examples.mjs",
+    "circle-examples": "npm run build && node scripts/circle-examples.mjs"
   },
   "dependencies": {
     "qrcode-generator": "^1.4.3"

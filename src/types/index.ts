@@ -20,6 +20,7 @@ export type CornerSquareType = "dot" | "square" | "extra-rounded" | "rounded";
 export type Extension = "svg" | "png" | "jpeg" | "webp";
 export type GradientType = "radial" | "linear";
 export type DrawType = "canvas" | "svg";
+export type ShapeType = "square" | "circle";
 
 export interface Canvas extends HTMLCanvasElement {
   toBuffer?: (type: string) => Buffer;
@@ -218,6 +219,11 @@ export interface LabelOptions {
 
 export type Options = {
   type?: DrawType;
+  /**
+   * "circle": a round QR code. The real code stays square in the middle and the rest of the circle is
+   * filled with decorative dots in the same style; the background becomes a circle. Default "square".
+   */
+  shape?: ShapeType;
   width?: number;
   height?: number;
   margin?: number;
@@ -278,6 +284,12 @@ export type FilterFunction = (i: number, j: number) => boolean;
 export type DownloadOptions = {
   name?: string;
   extension?: Extension;
+};
+
+export type ShareOptions = DownloadOptions & {
+  /** Title and text passed to the share sheet. */
+  title?: string;
+  text?: string;
 };
 
 export type DrawArgs = {

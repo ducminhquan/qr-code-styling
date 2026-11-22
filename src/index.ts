@@ -7,8 +7,10 @@ import errorCorrectionPercents from "./constants/errorCorrectionPercents";
 import modes from "./constants/modes";
 import qrTypes from "./constants/qrTypes";
 import drawTypes from "./constants/drawTypes";
+import payload from "./tools/payloads";
 
 export * from "./types";
+export type { WifiOptions, VCardOptions, EventOptions } from "./tools/payloads";
 
 export {
   dotTypes,
@@ -18,7 +20,8 @@ export {
   errorCorrectionPercents,
   modes,
   qrTypes,
-  drawTypes
+  drawTypes,
+  payload
 };
 
 export default QRCodeStyling;

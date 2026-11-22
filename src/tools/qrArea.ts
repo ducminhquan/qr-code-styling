@@ -1,4 +1,5 @@
 import { RequiredOptions } from "../core/QROptions";
+import { getCircleLayout } from "./circle";
 
 export interface QRArea {
   count: number;
@@ -16,7 +17,7 @@ export interface QRArea {
 export default function getQRArea(options: RequiredOptions, count: number): QRArea {
   const placement = options.art?.placement;
   if (placement && placement.size > 0) {
-    const dotSize = Math.floor(placement.size / count);
+    const dotSize = Math.floor(placement.size / (options.shape === "circle" ? getCircleLayout(count).size : count));
     return {
       count,
       dotSize,
@@ -25,7 +26,8 @@ export default function getQRArea(options: RequiredOptions, count: number): QRAr
     };
   }
   const minSize = Math.min(options.width, options.height) - options.margin * 2;
-  const dotSize = Math.floor(minSize / count);
+  // A round code is drawn on a larger grid: the real code sits in the middle of the circle.
+  const dotSize = Math.floor(minSize / (options.shape === "circle" ? getCircleLayout(count).size : count));
   return {
     count,
     dotSize,

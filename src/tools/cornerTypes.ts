@@ -11,15 +11,17 @@ const SOLID_CORNER_DOT_TYPES: DotType[] = ["diamond", "small-square", "vertical-
 export const ROUND_DOT_TYPES: DotType[] = ["dots", "rounded", "extra-rounded", "classy-rounded", "fluid"];
 
 /** True when alignment patterns must be drawn as plain squares for this dot type to scan. */
-export const needsSolidAlignment = (type: DotType): boolean => SOLID_CORNER_DOT_TYPES.indexOf(type) !== -1;
+export const needsSolidAlignment = (type: DotType): boolean =>
+  type === "fluid" || SOLID_CORNER_DOT_TYPES.indexOf(type) !== -1;
 
 export default function getCornerTypes(options: RequiredOptions): {
   square?: CornerSquareType;
   dot?: CornerDotType;
 } {
   const type = options.dotsOptions.type;
-  if (options.art?.mode === "blend" || type === "fluid") {
-    // Blend art draws only some of the dots, and fluid dots thin the finder rings, so finders
+  if (options.art?.mode === "blend" || options.shape === "circle" || type === "fluid") {
+    // Blend art draws only some of the dots, round codes surround the finders with decoration, and
+    // fluid dots thin the finder rings, so finders
     // made of dots would not scan well: they are drawn solid, round when the dots are round.
     const round = ROUND_DOT_TYPES.indexOf(type) !== -1;
     return {

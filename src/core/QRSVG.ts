@@ -5,6 +5,7 @@ import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import getQRArea from "../tools/qrArea";
+import { getCircleLayout, isCircle } from "../tools/circle";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
 import { roundedRect, toSVGPath } from "../figures/shapes";
@@ -268,6 +269,21 @@ export default class QRSVG {
       const color = options.backgroundOptions?.color;
 
       if (gradientOptions || color) {
+        if (isCircle(options)) {
+          const size = Math.min(options.width, options.height);
+          this._createColor({
+            options: gradientOptions,
+            color: color,
+            additionalRotation: 0,
+            x: (options.width - size) / 2,
+            y: (options.height - size) / 2,
+            height: size,
+            width: size,
+            name: "background-color",
+            radius: size / 2
+          });
+          return;
+        }
         this._createColor({
           options: gradientOptions,
           color: color,
@@ -295,6 +311,8 @@ export default class QRSVG {
     }
 
     const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
+    // Round codes draw decorative dots around the code: the dots color covers the whole circle.
+    const colorPad = isCircle(options) ? getCircleLayout(count).pad * dotSize : 0;
     const typeDot = new QRDot({
       svg: this._element,
       type: options.dotsOptions.type,
@@ -312,32 +330,42 @@ export default class QRSVG {
       options: options.dotsOptions?.gradient,
       color: options.dotsOptions.color,
       additionalRotation: 0,
-      x: xBeginning,
-      y: yBeginning,
-      height: count * dotSize,
-      width: count * dotSize,
+      x: xBeginning - colorPad,
+      y: yBeginning - colorPad,
+      height: count * dotSize + 2 * colorPad,
+      width: count * dotSize + 2 * colorPad,
       name: "dot-color",
       imageHref: this._dotsImageHref
     });
 
-    for (let i = 0; i < count; i++) {
-      for (let j = 0; j < count; j++) {
-        if (filter && !filter(i, j)) {
-          continue;
-        }
-        if (!this._qr?.isDark(i, j)) {
+    const circle = isCircle(options) ? getCircleLayout(count) : undefined;
+    const from = circle ? -circle.pad : 0;
+    const to = circle ? count + circle.pad : count;
+    const inCode = (i: number, j: number): boolean => i >= 0 && j >= 0 && i < count && j < count;
+    const isDark = (i: number, j: number): boolean => {
+      if (filter && !filter(i, j)) return false;
+      if (inCode(i, j)) return !!this._qr && this._qr.isDark(i, j);
+      return !!circle && circle.isDecoration(i, j);
+    };
+
+    for (let i = from; i < to; i++) {
+      for (let j = from; j < to; j++) {
+        if (inCode(i, j) ? (filter && !filter(i, j)) || !this._qr?.isDark(i, j) : !isDark(i, j)) {
           continue;
         }
 
-        const dot = role && role(i, j) === "alignment" ? squareDot : typeDot;
+        const dot = role && inCode(i, j) && role(i, j) === "alignment" ? squareDot : typeDot;
         dot.draw(
           xBeginning + i * dotSize,
           yBeginning + j * dotSize,
           dotSize,
           (xOffset: number, yOffset: number): boolean => {
-            if (i + xOffset < 0 || j + yOffset < 0 || i + xOffset >= count || j + yOffset >= count) return false;
-            if (filter && !filter(i + xOffset, j + yOffset)) return false;
-            return !!this._qr && this._qr.isDark(i + xOffset, j + yOffset);
+            if (!circle) {
+              if (i + xOffset < 0 || j + yOffset < 0 || i + xOffset >= count || j + yOffset >= count) return false;
+              if (filter && !filter(i + xOffset, j + yOffset)) return false;
+              return !!this._qr && this._qr.isDark(i + xOffset, j + yOffset);
+            }
+            return isDark(i + xOffset, j + yOffset);
           }
         );
 
@@ -624,9 +652,12 @@ export default class QRSVG {
     height,
     width,
     name,
-    imageHref
+    imageHref,
+    radius
   }: {
     imageHref?: string;
+    /** Rounds the rect's corners (a circle when it is half the size). */
+    radius?: number;
     options?: Gradient;
     color?: string;
     additionalRotation: number;
@@ -654,6 +685,10 @@ export default class QRSVG {
     rect.setAttribute("height", String(height));
     rect.setAttribute("width", String(width));
     rect.setAttribute("clip-path", `url('#clip-path-${name}')`);
+    if (radius) {
+      rect.setAttribute("rx", String(radius));
+      rect.setAttribute("ry", String(radius));
+    }
 
     if (options) {
       let gradient: SVGElement;

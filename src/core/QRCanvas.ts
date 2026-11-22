@@ -5,6 +5,7 @@ import QRCornerSquare from "../figures/cornerSquare/canvas/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/canvas/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import getQRArea from "../tools/qrArea";
+import { getCircleLayout, isCircle } from "../tools/circle";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
 import { roundedRect, toCanvas } from "../figures/shapes";
@@ -240,6 +241,13 @@ export default class QRCanvas {
       } else if (options.backgroundOptions.color) {
         canvasContext.fillStyle = options.backgroundOptions.color;
       }
+      if (isCircle(options)) {
+        const size = Math.min(this._canvas.width, this._canvas.height);
+        canvasContext.beginPath();
+        canvasContext.arc(this._canvas.width / 2, this._canvas.height / 2, size / 2, 0, Math.PI * 2);
+        canvasContext.fill();
+        return;
+      }
       canvasContext.fillRect(0, 0, this._canvas.width, this._canvas.height);
     }
   }
@@ -263,6 +271,8 @@ export default class QRCanvas {
     }
 
     const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
+    // Round codes draw decorative dots around the code: the dots color covers the whole circle.
+    const colorPad = isCircle(options) ? getCircleLayout(count).pad * dotSize : 0;
     const typeDot = new QRDot({ context: canvasContext, type: options.dotsOptions.type });
     const squareDot = new QRDot({ context: canvasContext, type: "square" });
     const solidAlignment = needsSolidAlignment(options.dotsOptions.type);
@@ -270,23 +280,33 @@ export default class QRCanvas {
 
     canvasContext.beginPath();
 
-    for (let i = 0; i < count; i++) {
-      for (let j = 0; j < count; j++) {
-        if (filter && !filter(i, j)) {
+    const circle = isCircle(options) ? getCircleLayout(count) : undefined;
+    const from = circle ? -circle.pad : 0;
+    const to = circle ? count + circle.pad : count;
+    const inCode = (i: number, j: number): boolean => i >= 0 && j >= 0 && i < count && j < count;
+    const isDark = (i: number, j: number): boolean => {
+      if (filter && !filter(i, j)) return false;
+      if (inCode(i, j)) return !!this._qr && this._qr.isDark(i, j);
+      return !!circle && circle.isDecoration(i, j);
+    };
+
+    for (let i = from; i < to; i++) {
+      for (let j = from; j < to; j++) {
+        if (inCode(i, j) ? (filter && !filter(i, j)) || !this._qr?.isDark(i, j) : !isDark(i, j)) {
           continue;
         }
-        if (!this._qr.isDark(i, j)) {
-          continue;
-        }
-        const dot = role && role(i, j) === "alignment" ? squareDot : typeDot;
+        const dot = role && inCode(i, j) && role(i, j) === "alignment" ? squareDot : typeDot;
         dot.draw(
           xBeginning + i * dotSize,
           yBeginning + j * dotSize,
           dotSize,
           (xOffset: number, yOffset: number): boolean => {
-            if (i + xOffset < 0 || j + yOffset < 0 || i + xOffset >= count || j + yOffset >= count) return false;
-            if (filter && !filter(i + xOffset, j + yOffset)) return false;
-            return !!this._qr && this._qr.isDark(i + xOffset, j + yOffset);
+            if (!circle) {
+              if (i + xOffset < 0 || j + yOffset < 0 || i + xOffset >= count || j + yOffset >= count) return false;
+              if (filter && !filter(i + xOffset, j + yOffset)) return false;
+              return !!this._qr && this._qr.isDark(i + xOffset, j + yOffset);
+            }
+            return isDark(i + xOffset, j + yOffset);
           }
         );
       }
@@ -298,9 +318,9 @@ export default class QRCanvas {
         context: canvasContext,
         options: gradientOptions,
         additionalRotation: 0,
-        x: xBeginning,
-        y: yBeginning,
-        size: count * dotSize
+        x: xBeginning - colorPad,
+        y: yBeginning - colorPad,
+        size: count * dotSize + 2 * colorPad
       });
 
       gradientOptions.colorStops.forEach(({ offset, color }: { offset: number; color: string }) => {

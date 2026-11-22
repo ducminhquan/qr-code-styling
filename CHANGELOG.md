@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.11.0
+
+Round codes, data builders and sharing. Existing options render exactly as before, except text with characters
+outside Latin-1 (see Fixed).
+
+### Added
+- `shape: "circle"`: a round QR code. The real code stays in the middle with an empty ring around it; the rest of the circle is filled with decorative dots in the same style, and the background is a circle. Finders are drawn solid (rounded with round dot types).
+- `QRCodeStyling.payload` (also a named export `payload`): `wifi`, `vCard`, `event`, `email`, `phone`, `sms` and `geo` build the data string for common QR codes, with each format's escaping.
+- `share()`: opens the phone's share sheet with the code as a file (Web Share API), and downloads it where sharing files is not supported.
+
+### Fixed
+- Text with characters outside Latin-1 (most Vietnamese, emoji, CJK) is now encoded as UTF-8. Before, only the low byte of each character was kept, so these codes read back as the wrong text. Latin-1 text keeps the old encoding, so those codes do not change.
+- `fluid` dots draw alignment patterns as solid squares, which some decorations could otherwise imitate.
+
 ## 1.10.0
 
 Illustration-style QR art. Without the new options, output is unchanged.

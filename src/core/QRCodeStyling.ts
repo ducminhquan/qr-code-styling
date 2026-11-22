@@ -7,12 +7,17 @@ import drawTypes from "../constants/drawTypes";
 
 import defaultOptions, { RequiredOptions } from "./QROptions";
 import sanitizeOptions from "../tools/sanitizeOptions";
-import { Extension, QRCode, Options, DownloadOptions, VerifyOptions, VerifyResult } from "../types";
+import { Extension, QRCode, Options, DownloadOptions, VerifyOptions, VerifyResult, ShareOptions } from "../types";
 import { getContrast } from "../art/art";
 import qrcode from "qrcode-generator";
+import toUTF8Bytes, { needsUTF8 } from "../tools/utf8";
+import payload from "../tools/payloads";
 import { hasBrowserDom } from "../tools/svgDom";
 
 export default class QRCodeStyling {
+  /** Builders for Wi-Fi, contact, event, e-mail, phone, SMS and location codes: pass the result as `data`. */
+  static payload = payload;
+
   _options: RequiredOptions;
   _container?: HTMLElement;
   _canvas?: QRCanvas;
@@ -86,7 +91,21 @@ export default class QRCodeStyling {
     }
 
     this._qr = qrcode(this._options.qrOptions.typeNumber, this._options.qrOptions.errorCorrectionLevel);
-    this._qr.addData(this._options.data, this._options.qrOptions.mode || getMode(this._options.data));
+    const data = this._options.data;
+    if (needsUTF8(data)) {
+      // Text outside Latin-1 (Vietnamese, emoji...) is encoded as UTF-8, which scanners expect.
+      // Latin-1 text keeps the old one-byte-per-character encoding, so existing codes do not change.
+      const generator = qrcode as unknown as { stringToBytes: (text: string) => number[] };
+      const latin1 = generator.stringToBytes;
+      generator.stringToBytes = toUTF8Bytes;
+      try {
+        this._qr.addData(data, this._options.qrOptions.mode || getMode(data));
+      } finally {
+        generator.stringToBytes = latin1;
+      }
+    } else {
+      this._qr.addData(data, this._options.qrOptions.mode || getMode(data));
+    }
     this._qr.make();
 
     if (this._options.type === drawTypes.canvas && !this._canUseCanvas()) {
@@ -332,4 +351,40 @@ export default class QRCodeStyling {
       downloadURI(url, `${name}.${extension}`);
     }
   }
+
+  /**
+   * Opens the phone's share sheet with the QR code as a file (Web Share API). Where sharing files is not
+   * supported (most desktop browsers), downloads it instead. Resolves to "shared", "downloaded", or
+   * "cancelled" when the user closes the share sheet.
+   */
+  async share(shareOptions: ShareOptions = {}): Promise<"shared" | "downloaded" | "cancelled"> {
+    if (!this._qr) throw "QR code is empty";
+    const extension = shareOptions.extension || "png";
+    const name = shareOptions.name || "qr";
+    const nav = typeof navigator !== "undefined" ? (navigator as ShareNavigator) : undefined;
+
+    if (nav?.share && typeof File !== "undefined") {
+      const blob = (await this.getRawData(extension)) as Blob;
+      const type = extension === "svg" ? "image/svg+xml" : `image/${extension}`;
+      const file = new File([blob], `${name}.${extension}`, { type });
+      const data = { files: [file], title: shareOptions.title, text: shareOptions.text };
+      if (!nav.canShare || nav.canShare(data)) {
+        try {
+          await nav.share(data);
+          return "shared";
+        } catch (error) {
+          if ((error as { name?: string })?.name === "AbortError") return "cancelled";
+          // Any other failure (not allowed, not supported): fall back to a download.
+        }
+      }
+    }
+
+    await this.download({ name, extension });
+    return "downloaded";
+  }
 }
+
+type ShareNavigator = {
+  share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>;
+  canShare?: (data: { files?: File[]; title?: string; text?: string }) => boolean;
+};

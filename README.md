@@ -169,6 +169,49 @@ placement |object `{ x, y, size }`          |             |Put the code in this 
 Always check art codes with `verify()` below: a picture with large mid-grey areas or very small modules
 (under about 7 px) may need a higher `contrast`, a larger size or a higher error correction level.
 
+### Round QR codes
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/circle_examples.png" width="720" />
+
+`shape: "circle"` draws a round code. The real code stays square in the middle, with an empty ring around it so
+scanners still find it, and the rest of the circle is filled with decorative dots in the same style. The background
+becomes a circle too. The decoration is the same every time for the same data.
+
+```js
+new QRCodeStyling({ data: "https://example.com", shape: "circle", dotsOptions: { type: "rounded" } });
+```
+
+A round code uses smaller modules than a square one of the same size, so keep it at least ~240 px for short data and
+check it with `verify()`.
+
+### Wi-Fi, contacts, events and more
+
+`QRCodeStyling.payload` (also exported as `payload`) builds the text that phones understand. Pass the result as `data`.
+
+```js
+const { payload } = QRCodeStyling;
+
+payload.wifi({ ssid: "LongChau-Guest", password: "secret" });     // WIFI:T:WPA;S:LongChau-Guest;P:secret;;
+payload.vCard({ firstName: "Quân", lastName: "Nguyễn", phone: "+84900000000", email: "a@example.com" });
+payload.event({ title: "Khai trương", start: "2026-12-01T09:00:00+07:00", end: "2026-12-01T11:00:00+07:00" });
+payload.email({ to: "cskh@example.com", subject: "Hỏi đáp" });
+payload.phone("1800 6928");
+payload.sms({ number: "+84900000000", message: "Xin chào" });
+payload.geo({ latitude: 10.7769, longitude: 106.7009 });
+```
+
+Special characters are escaped for each format. Text outside Latin-1 (Vietnamese, emoji...) is encoded as UTF-8.
+
+### Sharing on phones
+
+`share()` opens the phone's share sheet with the code as an image (Web Share API), so people can send it to a chat
+app or save it to Photos. Where sharing files is not supported, it downloads the file instead.
+
+```js
+const result = await qrCode.share({ name: "wifi", extension: "png", title: "Wi-Fi Long Châu" });
+// "shared", "cancelled" or "downloaded"
+```
+
 ### Checking that a code scans
 
 `verify()` renders the code and decodes it with a QR decoder you pass in, so the library itself stays dependency-free.
@@ -204,6 +247,7 @@ Property               |Type                     |Default Value|Description
 width                  |number                   |`300`        |Size of canvas
 height                 |number                   |`300`        |Size of canvas
 type                   |string (`'canvas' 'svg'`)|`canvas`     |The type of the element that will be rendered
+shape                  |string (`'square' 'circle'`)|`'square'` |`'circle'` draws a round code with decorative dots around the real one
 data                   |string                   |             |The date will be encoded to the QR code
 image                  |string                   |             |The image will be copied to the center of the QR code
 margin                 |number                   |`0`          |Margin around canvas
@@ -323,6 +367,15 @@ Param  |Type    |Description
 -------|--------|--------------------------------------------------------------
 decoder|function|A QR decoder with the jsQR signature `(rgba, width, height) => { data } \| null`
 adjust |boolean |For QR art: raise `art.contrast` until the code scans. Default `false`
+
+`QRCodeStyling.share({ name, extension, title, text }) => Promise<'shared' | 'cancelled' | 'downloaded'>`
+
+Param    |Type                                |Default Value|Description
+---------|------------------------------------|-------------|------------
+name     |string                              |`'qr'`       |File name, without extension
+extension|string (`'png' 'jpeg' 'webp' 'svg'`)|`'png'`      |File type
+title    |string                              |             |Title for the share sheet
+text     |string                              |             |Text for the share sheet
 
 `QRCodeStyling.update(options) => void`
 
