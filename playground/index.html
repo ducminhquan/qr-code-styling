@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Code Playground</title>
+<meta name="description" content="Try every option of qr-code-styling-node live: dots, corners, gradients, logo, frames, round codes and QR art.">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #16181d;
+  --muted: #5f6673;
+  --line: #e3e6eb;
+  --field: #f1f3f6;
+  --accent: #2456d6;
+  --accent-ink: #ffffff;
+  --ok: #157a3c;
+  --bad: #b42318;
+  --checker: #e9ecf0;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111317;
+    --panel: #1a1d23;
+    --ink: #eceef2;
+    --muted: #9aa1ad;
+    --line: #2b3039;
+    --field: #232730;
+    --accent: #6f95ff;
+    --accent-ink: #0b1020;
+    --ok: #4cc27a;
+    --bad: #ff7b6e;
+    --checker: #262a32;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111317;
+  --panel: #1a1d23;
+  --ink: #eceef2;
+  --muted: #9aa1ad;
+  --line: #2b3039;
+  --field: #232730;
+  --accent: #6f95ff;
+  --accent-ink: #0b1020;
+  --ok: #4cc27a;
+  --bad: #ff7b6e;
+  --checker: #262a32;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding: 20px 24px 8px; max-width: 1200px; margin: 0 auto;
+}
+header h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--muted); }
+header a { color: var(--accent); }
+main {
+  display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px;
+  max-width: 1200px; margin: 0 auto; padding: 12px 24px 40px;
+}
+.controls { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.presets { display: flex; gap: 8px; flex-wrap: wrap; }
+.presets button { flex: 0 0 auto; }
+details {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+}
+summary {
+  cursor: pointer; padding: 12px 16px; font-weight: 600; list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; color: var(--muted); font-weight: 400; font-size: 18px; }
+details[open] summary::after { content: "−"; }
+.body { padding: 0 16px 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px 14px; }
+.body .wide { grid-column: 1 / -1; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 0; }
+label.c { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+input[type="text"], input[type="number"], input[type="url"], input[type="email"], input[type="password"], select, textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--field);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+}
+textarea { resize: vertical; min-height: 60px; }
+input[type="color"] { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); padding: 2px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+input[type="file"] { font-size: 12px; color: var(--muted); max-width: 100%; }
+button {
+  font: inherit; cursor: pointer; border-radius: 8px; padding: 7px 12px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.hidden { display: none !important; }
+.preview {
+  position: sticky; top: 12px; align-self: start;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.stage {
+  display: grid; place-items: center; aspect-ratio: 1; border-radius: 10px; overflow: hidden;
+  background-color: var(--checker);
+  background-image: linear-gradient(45deg, var(--bg) 25%, transparent 25%, transparent 75%, var(--bg) 75%),
+    linear-gradient(45deg, var(--bg) 25%, transparent 25%, transparent 75%, var(--bg) 75%);
+  background-size: 20px 20px; background-position: 0 0, 10px 10px;
+}
+.stage > * { max-width: 100%; max-height: 100%; width: 100% !important; height: auto !important; display: block; }
+.status { display: flex; align-items: center; gap: 8px; font-size: 13px; min-height: 20px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+.status.ok .dot { background: var(--ok); }
+.status.ok { color: var(--ok); }
+.status.bad .dot { background: var(--bad); }
+.status.bad { color: var(--bad); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row select { width: auto; }
+pre {
+  margin: 0; background: var(--field); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  max-height: 260px; overflow: auto; white-space: pre;
+}
+.theme { margin-left: auto; }
+@media (max-width: 900px) {
+  main { grid-template-columns: minmax(0, 1fr); padding: 12px 16px 32px; }
+  header { padding: 16px 16px 4px; }
+  .preview { position: static; order: -1; }
+  .stage { max-width: 360px; width: 100%; margin: 0 auto; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>QR Code Playground</h1>
+  <p>Every option of <a href="https://github.com/ducminhquan/qr-code-styling">qr-code-styling-node</a>, live.</p>
+  <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">◐</button>
+</header>
+<main>
+  <section class="controls">
+    <div class="presets" id="presets" aria-label="Style presets"></div>
+
+    <details open>
+      <summary>Content</summary>
+      <div class="body">
+        <div class="tabs wide" id="kinds"></div>
+        <div class="wide" id="kind-fields"></div>
+        <label class="f">Error correction
+          <select id="ecl"><option value="L">L · 7%</option><option value="M">M · 15%</option><option value="Q" selected>Q · 25%</option><option value="H">H · 30%</option></select>
+        </label>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Size and shape</summary>
+      <div class="body">
+        <label class="f">Size (px)<input type="number" id="size" value="300" min="100" max="2000" step="10"></label>
+        <label class="f">Margin (px)<input type="number" id="margin" value="10" min="0" max="200"></label>
+        <label class="f">Shape
+          <select id="shape"><option value="square">Square</option><option value="circle">Circle</option></select>
+        </label>
+        <label class="f">Render as
+          <select id="drawType"><option value="canvas">Canvas</option><option value="svg">SVG</option></select>
+        </label>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Dots</summary>
+      <div class="body">
+        <label class="f">Type<select id="dotType"></select></label>
+        <label class="f">Color<input type="color" id="dotColor" value="#1f2a44"></label>
+        <label class="c"><input type="checkbox" id="dotGrad"> Gradient</label>
+        <label class="f grad-dot">Gradient type
+          <select id="dotGradType"><option value="linear">Linear</option><option value="radial">Radial</option></select>
+        </label>
+        <label class="f grad-dot">Second color<input type="color" id="dotColor2" value="#2456d6"></label>
+        <label class="f grad-dot">Rotation (°)<input type="range" id="dotGradRot" min="0" max="360" value="45"></label>
+      </div>
+    </details>
+
+    <details>
+      <summary>Corners</summary>
+      <div class="body">
+        <label class="f">Corner square type<select id="csType"></select></label>
+        <label class="f">Corner square color<input type="color" id="csColor" value="#1f2a44"></label>
+        <label class="f">Corner dot type<select id="cdType"></select></label>
+        <label class="f">Corner dot color<input type="color" id="cdColor" value="#1f2a44"></label>
+        <label class="c wide"><input type="checkbox" id="cornersFollow" checked> Use the dots color</label>
+        <p class="hint wide">Auto picks a corner style that matches the dots.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Background</summary>
+      <div class="body">
+        <label class="f">Color<input type="color" id="bgColor" value="#ffffff"></label>
+        <label class="c"><input type="checkbox" id="bgTransparent"> Transparent</label>
+      </div>
+    </details>
+
+    <details>
+      <summary>Logo</summary>
+      <div class="body">
+        <label class="f wide">Picture<input type="file" id="logoFile" accept="image/*"></label>
+        <div class="row wide"><button type="button" id="logoSample">Use a sample logo</button><button type="button" id="logoClear">Remove</button></div>
+        <label class="f">Logo size (0 to 1)<input type="range" id="logoSize" min="0.1" max="0.5" step="0.01" value="0.4"></label>
+        <label class="f">Margin (px)<input type="number" id="logoMargin" value="4" min="0" max="50"></label>
+        <label class="c"><input type="checkbox" id="logoHide" checked> Hide dots behind it</label>
+        <label class="c"><input type="checkbox" id="logoPlate"> White plate</label>
+      </div>
+    </details>
+
+    <details>
+      <summary>Frame and label</summary>
+      <div class="body">
+        <label class="c wide"><input type="checkbox" id="frameOn"> Frame</label>
+        <label class="f frame">Color<input type="color" id="frameColor" value="#2456d6"></label>
+        <label class="f frame">Radius (px)<input type="number" id="frameRadius" value="24" min="0" max="200"></label>
+        <label class="f frame">Width (px, blank = auto)<input type="number" id="frameWidth" min="0" max="100" placeholder="auto"></label>
+        <label class="f wide">Label text<input type="text" id="labelText" placeholder="SCAN ME"></label>
+        <label class="f">Position
+          <select id="labelPos"><option value="bottom">Bottom</option><option value="top">Top</option></select>
+        </label>
+        <label class="f">Font size (px, blank = auto)<input type="number" id="labelSize" min="6" max="120" placeholder="auto"></label>
+      </div>
+    </details>
+
+    <details>
+      <summary>QR art</summary>
+      <div class="body">
+        <label class="f wide">Picture<input type="file" id="artFile" accept="image/*"></label>
+        <div class="row wide"><button type="button" id="artSample">Use a sample picture</button><button type="button" id="artClear">Remove</button></div>
+        <label class="f">Mode
+          <select id="artMode"><option value="blend">Blend</option><option value="halftone">Halftone</option><option value="colorize">Colorize</option></select>
+        </label>
+        <label class="f">Contrast (0 to 1)<input type="range" id="artContrast" min="0" max="1" step="0.05" value="0.6"></label>
+        <label class="c"><input type="checkbox" id="artColored" checked> Keep picture colors (halftone)</label>
+        <p class="hint wide">Error correction H is recommended for art. Use "Check it scans" after each change.</p>
+      </div>
+    </details>
+  </section>
+
+  <aside class="preview" aria-label="Preview">
+    <div class="stage" id="stage"></div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Not checked yet</span></div>
+    <div class="row">
+      <button type="button" id="verify">Check it scans</button>
+      <select id="ext" aria-label="File type"><option value="png">PNG</option><option value="svg">SVG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select>
+      <button type="button" class="primary" id="download">Download</button>
+    </div>
+    <div class="row" style="justify-content: space-between">
+      <strong>Code</strong>
+      <button type="button" id="copy">Copy</button>
+    </div>
+    <pre id="code"></pre>
+  </aside>
+</main>
+
+<script src="qr-code-styling.js"></script>
+<script src="jsQR.js"></script>
+<script>
+(function () {
+  "use strict";
+  var QRCodeStyling = window.QRCodeStyling;
+  var payload = QRCodeStyling.payload;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var DOT_TYPES = ["square", "rounded", "extra-rounded", "dots", "classy", "classy-rounded", "diamond",
+    "small-square", "vertical-lines", "horizontal-lines", "fluid", "wave", "blob", "circuit"];
+  var CS_TYPES = ["", "square", "rounded", "extra-rounded", "dot"];
+  var CD_TYPES = ["", "square", "rounded", "dot"];
+
+  function fill(select, values, selected) {
+    select.innerHTML = values.map(function (v) {
+      return '<option value="' + v + '"' + (v === selected ? " selected" : "") + ">" + (v || "Auto") + "</option>";
+    }).join("");
+  }
+  fill($("dotType"), DOT_TYPES, "rounded");
+  fill($("csType"), CS_TYPES, "");
+  fill($("cdType"), CD_TYPES, "");
+
+  // ---- Content kinds --------------------------------------------------------------------------
+  var KINDS = {
+    text: { label: "URL or text", fields: [["text", "Text", "textarea", "https://github.com/ducminhquan/qr-code-styling"]],
+      build: function (v) { return { data: v.text, code: JSON.stringify(v.text) }; } },
+    wifi: { label: "Wi-Fi", fields: [["ssid", "Network name", "text", "Cafe Guest"], ["password", "Password", "text", "welcome123"],
+      ["encryption", "Security", ["WPA", "WEP", "nopass"], "WPA"]],
+      build: function (v) { var o = { ssid: v.ssid, password: v.password, encryption: v.encryption };
+        return { data: payload.wifi(o), code: "payload.wifi(" + js(o) + ")" }; } },
+    vcard: { label: "Contact", fields: [["firstName", "First name", "text", "An"], ["lastName", "Last name", "text", "Nguyễn"],
+      ["phone", "Phone", "text", "+84 90 123 4567"], ["email", "E-mail", "email", "an@example.com"],
+      ["organization", "Company", "text", ""], ["url", "Website", "url", ""]],
+      build: function (v) { var o = clean(v); return { data: payload.vCard(o), code: "payload.vCard(" + js(o) + ")" }; } },
+    email: { label: "E-mail", fields: [["to", "To", "email", "hello@example.com"], ["subject", "Subject", "text", "Hello"],
+      ["body", "Message", "textarea", ""]],
+      build: function (v) { var o = clean(v); return { data: payload.email(o), code: "payload.email(" + js(o) + ")" }; } },
+    phone: { label: "Phone", fields: [["number", "Number", "text", "+84 90 123 4567"]],
+      build: function (v) { return { data: payload.phone(v.number), code: "payload.phone(" + JSON.stringify(v.number) + ")" }; } },
+    sms: { label: "SMS", fields: [["number", "Number", "text", "+84 90 123 4567"], ["message", "Message", "text", "Hi!"]],
+      build: function (v) { var o = clean(v); return { data: payload.sms(o), code: "payload.sms(" + js(o) + ")" }; } }
+  };
+  var kind = "text";
+  var kindValues = {};
+
+  function clean(obj) {
+    var out = {};
+    Object.keys(obj).forEach(function (k) { if (obj[k] !== "" && obj[k] !== undefined) out[k] = obj[k]; });
+    return out;
+  }
+
+  function renderKinds() {
+    $("kinds").innerHTML = Object.keys(KINDS).map(function (k) {
+      return '<button type="button" data-kind="' + k + '" aria-pressed="' + (k === kind) + '">' + KINDS[k].label + "</button>";
+    }).join("");
+    var spec = KINDS[kind];
+    var vals = kindValues[kind] || (kindValues[kind] = {});
+    $("kind-fields").innerHTML = '<div class="body" style="padding:0">' + spec.fields.map(function (f) {
+      var id = "k-" + f[0];
+      if (vals[f[0]] === undefined) vals[f[0]] = f[3];
+      var value = String(vals[f[0]]).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+      var input;
+      if (Array.isArray(f[2])) {
+        input = '<select id="' + id + '">' + f[2].map(function (o) {
+          return '<option' + (o === vals[f[0]] ? " selected" : "") + ">" + o + "</option>";
+        }).join("") + "</select>";
+      } else if (f[2] === "textarea") {
+        input = '<textarea id="' + id + '">' + value + "</textarea>";
+      } else {
+        input = '<input type="' + f[2] + '" id="' + id + '" value="' + value + '">';
+      }
+      return '<label class="f' + (f[2] === "textarea" ? " wide" : "") + '">' + f[1] + input + "</label>";
+    }).join("") + "</div>";
+    spec.fields.forEach(function (f) {
+      $("k-" + f[0]).addEventListener("input", function (e) { vals[f[0]] = e.target.value; schedule(); });
+    });
+  }
+  $("kinds").addEventListener("click", function (e) {
+    var k = e.target.getAttribute && e.target.getAttribute("data-kind");
+    if (k) { kind = k; renderKinds(); schedule(); }
+  });
+
+  // ---- Images ---------------------------------------------------------------------------------
+  var logo = "";
+  var art = "";
+  var SAMPLE_LOGO = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#2456d6"/>' +
+    '<path d="M30 52l14 14 27-32" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  var SAMPLE_ART = (function () {
+    var c = document.createElement("canvas");
+    c.width = c.height = 400;
+    var g = c.getContext("2d");
+    var sky = g.createLinearGradient(0, 0, 0, 400);
+    sky.addColorStop(0, "#ffb26b"); sky.addColorStop(0.55, "#ff7a8a"); sky.addColorStop(1, "#5b3b8c");
+    g.fillStyle = sky; g.fillRect(0, 0, 400, 400);
+    g.fillStyle = "#fff1c9"; g.beginPath(); g.arc(200, 210, 80, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#2b1d4a";
+    g.beginPath(); g.moveTo(0, 400); g.lineTo(0, 290); g.lineTo(90, 220); g.lineTo(170, 300); g.lineTo(260, 200);
+    g.lineTo(400, 310); g.lineTo(400, 400); g.closePath(); g.fill();
+    return c.toDataURL("image/png");
+  })();
+
+  function readFile(input, done) {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () { done(String(reader.result)); };
+    reader.readAsDataURL(file);
+  }
+  $("logoFile").addEventListener("change", function () { readFile($("logoFile"), function (d) { logo = d; schedule(); }); });
+  $("logoSample").addEventListener("click", function () { logo = SAMPLE_LOGO; schedule(); });
+  $("logoClear").addEventListener("click", function () { logo = ""; $("logoFile").value = ""; schedule(); });
+  $("artFile").addEventListener("change", function () { readFile($("artFile"), function (d) { art = d; useArtDefaults(); schedule(); }); });
+  $("artSample").addEventListener("click", function () { art = SAMPLE_ART; useArtDefaults(); schedule(); });
+  $("artClear").addEventListener("click", function () { art = ""; $("artFile").value = ""; schedule(); });
+  function useArtDefaults() { $("ecl").value = "H"; }
+
+  // ---- Options --------------------------------------------------------------------------------
+  function num(id) { var v = $(id).value; return v === "" ? undefined : Number(v); }
+  function gradient(type, rotationDeg, c1, c2) {
+    return { type: type, rotation: Math.round(rotationDeg * Math.PI / 180 * 1000) / 1000,
+      colorStops: [{ offset: 0, color: c1 }, { offset: 1, color: c2 }] };
+  }
+
+  function collect() {
+    var content = KINDS[kind].build(kindValues[kind] || {});
+    var size = num("size") || 300;
+    var o = { type: $("drawType").value, width: size, height: size, data: content.data || " ", margin: num("margin") || 0,
+      qrOptions: { errorCorrectionLevel: $("ecl").value } };
+    if ($("shape").value === "circle") o.shape = "circle";
+
+    var dotColor = $("dotColor").value;
+    o.dotsOptions = { type: $("dotType").value, color: dotColor };
+    if ($("dotGrad").checked) {
+      o.dotsOptions.gradient = gradient($("dotGradType").value, Number($("dotGradRot").value), dotColor, $("dotColor2").value);
+    }
+    var follow = $("cornersFollow").checked;
+    o.cornersSquareOptions = { color: follow ? dotColor : $("csColor").value };
+    if ($("csType").value) o.cornersSquareOptions.type = $("csType").value;
+    o.cornersDotOptions = { color: follow ? dotColor : $("cdColor").value };
+    if ($("cdType").value) o.cornersDotOptions.type = $("cdType").value;
+    if (follow && o.dotsOptions.gradient) {
+      o.cornersSquareOptions.gradient = o.dotsOptions.gradient;
+      o.cornersDotOptions.gradient = o.dotsOptions.gradient;
+    }
+
+    o.backgroundOptions = { color: $("bgTransparent").checked ? "transparent" : $("bgColor").value };
+
+    if (logo) {
+      o.image = logo;
+      o.imageOptions = { imageSize: Number($("logoSize").value), margin: num("logoMargin") || 0,
+        hideBackgroundDots: $("logoHide").checked };
+      if ($("logoPlate").checked) { o.imageOptions.backgroundColor = "#ffffff"; o.imageOptions.backgroundRadius = 0.3; }
+    }
+
+    if ($("frameOn").checked) {
+      o.frameOptions = clean({ color: $("frameColor").value, radius: num("frameRadius"), width: num("frameWidth") });
+    }
+    var text = $("labelText").value.trim();
+    if (text) {
+      o.labelOptions = clean({ text: text, position: $("labelPos").value === "top" ? "top" : undefined, fontSize: num("labelSize") });
+    }
+
+    if (art) {
+      var mode = $("artMode").value;
+      o.art = { image: art, mode: mode, contrast: Number($("artContrast").value) };
+      if (mode === "halftone" && $("artColored").checked) o.art.colored = true;
+    }
+    return { options: o, dataCode: content.code };
+  }
+
+  // ---- Code output ----------------------------------------------------------------------------
+  function js(value, indent) {
+    indent = indent || "";
+    if (Array.isArray(value)) {
+      var simple = value.every(function (v) { return typeof v !== "object"; });
+      if (simple) return "[" + value.map(function (v) { return js(v); }).join(", ") + "]";
+      return "[\n" + value.map(function (v) { return indent + "  " + js(v, indent + "  "); }).join(",\n") + "\n" + indent + "]";
+    }
+    if (value && typeof value === "object") {
+      var keys = Object.keys(value).filter(function (k) { return value[k] !== undefined; });
+      var flat = keys.every(function (k) { return typeof value[k] !== "object"; });
+      var parts = keys.map(function (k) {
+        var key = /^[a-zA-Z_$][\w$]*$/.test(k) ? k : JSON.stringify(k);
+        return key + ": " + js(value[k], indent + "  ");
+      });
+      var one = "{ " + parts.join(", ") + " }";
+      if (flat && one.length < 70) return one;
+      return "{\n" + parts.map(function (p) { return indent + "  " + p; }).join(",\n") + "\n" + indent + "}";
+    }
+    if (typeof value === "string" && value.indexOf("@@") === 0) return value.slice(2);
+    return JSON.stringify(value);
+  }
+
+  function codeFor(state) {
+    var o = JSON.parse(JSON.stringify(state.options));
+    o.data = "@@" + state.dataCode.replace(/\n/g, "\n  ");
+    if (o.type === "canvas") delete o.type;
+    if (o.qrOptions.errorCorrectionLevel === "Q") delete o.qrOptions;
+    if (o.image) o.image = o.image === SAMPLE_LOGO ? "https://example.com/logo.svg" : "logo.png";
+    if (o.art) o.art.image = "picture.jpg";
+    var usesPayload = state.dataCode.indexOf("payload.") === 0;
+    return 'import QRCodeStyling' + (usesPayload ? ", { payload }" : "") + ' from "qr-code-styling-node";\n\n' +
+      "const qrCode = new QRCodeStyling(" + js(o) + ");\n\nqrCode.append(document.getElementById(\"qr\"));\n" +
+      '// qrCode.download({ name: "qr", extension: "' + $("ext").value + '" });\n';
+  }
+
+  // ---- Rendering ------------------------------------------------------------------------------
+  var qr = null;
+  var current = null;
+  var timer = 0;
+  function schedule() { clearTimeout(timer); timer = setTimeout(render, 120); }
+
+  function setStatus(cls, text) {
+    $("status").className = "status" + (cls ? " " + cls : "");
+    $("statusText").textContent = text;
+  }
+
+  // Let an SVG preview scale with the stage like the canvas does.
+  function fitSvg() {
+    var svg = $("stage").querySelector("svg");
+    if (svg && !svg.getAttribute("viewBox") && svg.getAttribute("width")) {
+      svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
+    }
+  }
+  new MutationObserver(fitSvg).observe($("stage"), { childList: true, subtree: true, attributes: true, attributeFilter: ["width", "height"] });
+
+  function render() {
+    current = collect();
+    var stage = $("stage");
+    try {
+      if (!qr || qr._options.type !== current.options.type) {
+        qr = new QRCodeStyling(current.options);
+        stage.innerHTML = "";
+        qr.append(stage);
+      } else {
+        qr.update(current.options);
+      }
+      setStatus("", "Not checked yet");
+    } catch (err) {
+      setStatus("bad", "Can’t draw this: " + (err && err.message ? err.message : err));
+    }
+    $("code").textContent = codeFor(current);
+    document.querySelectorAll(".grad-dot").forEach(function (el) { el.classList.toggle("hidden", !$("dotGrad").checked); });
+    document.querySelectorAll(".frame").forEach(function (el) { el.classList.toggle("hidden", !$("frameOn").checked); });
+    ["csColor", "cdColor"].forEach(function (id) { $(id).closest("label").classList.toggle("hidden", $("cornersFollow").checked); });
+  }
+
+  $("verify").addEventListener("click", function () {
+    if (!qr || !window.jsQR) return;
+    setStatus("", "Checking…");
+    qr.verify({ decoder: window.jsQR, adjust: !!art }).then(function (res) {
+      if (res.readable) {
+        var extra = art && res.contrast !== undefined && res.contrast !== Number($("artContrast").value)
+          ? " (needed contrast " + res.contrast.toFixed(2) + ")" : "";
+        if (extra) { $("artContrast").value = res.contrast; render(); }
+        setStatus("ok", "Scans fine" + extra);
+      } else {
+        setStatus("bad", "Doesn’t scan with jsQR. Try more contrast, a bigger size or error correction H.");
+      }
+    }).catch(function (err) { setStatus("bad", String(err && err.message ? err.message : err)); });
+  });
+
+  $("download").addEventListener("click", function () {
+    if (qr) qr.download({ name: "qr-code", extension: $("ext").value });
+  });
+  $("ext").addEventListener("change", function () { if (current) $("code").textContent = codeFor(current); });
+
+  $("copy").addEventListener("click", function () {
+    var text = $("code").textContent;
+    var done = function () { $("copy").textContent = "Copied"; setTimeout(function () { $("copy").textContent = "Copy"; }, 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  });
+  function fallbackCopy(text) {
+    var t = document.createElement("textarea");
+    t.value = text; document.body.appendChild(t); t.select();
+    try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+    t.remove();
+  }
+
+  document.querySelector(".controls").addEventListener("input", function (e) {
+    if (e.target.type !== "file") schedule();
+  });
+  document.querySelector(".controls").addEventListener("change", function (e) {
+    if (e.target.type !== "file") schedule();
+  });
+
+  // ---- Presets --------------------------------------------------------------------------------
+  var PRESETS = {
+    Classic: { dotType: "square", dotColor: "#000000", dotGrad: false, bgColor: "#ffffff", shape: "square", frameOn: false, labelText: "" },
+    Soft: { dotType: "rounded", dotColor: "#1f2a44", dotGrad: false, bgColor: "#ffffff", shape: "square", frameOn: false, labelText: "" },
+    Fluid: { dotType: "fluid", dotColor: "#0f766e", dotGrad: true, dotColor2: "#2456d6", dotGradRot: 45, bgColor: "#ffffff", shape: "square", frameOn: false, labelText: "" },
+    Round: { dotType: "dots", dotColor: "#7c3aed", dotGrad: true, dotGradType: "radial", dotColor2: "#db2777", bgColor: "#ffffff", shape: "circle", frameOn: false, labelText: "" },
+    Framed: { dotType: "extra-rounded", dotColor: "#1d4ed8", dotGrad: false, bgColor: "#ffffff", shape: "square", frameOn: true, frameColor: "#1d4ed8", frameRadius: 24, labelText: "SCAN ME" },
+    Circuit: { dotType: "circuit", dotColor: "#e5e7eb", dotGrad: false, bgColor: "#111827", shape: "square", frameOn: false, labelText: "" }
+  };
+  $("presets").innerHTML = Object.keys(PRESETS).map(function (n) { return '<button type="button" data-preset="' + n + '">' + n + "</button>"; }).join("");
+  $("presets").addEventListener("click", function (e) {
+    var p = PRESETS[e.target.getAttribute && e.target.getAttribute("data-preset")];
+    if (!p) return;
+    Object.keys(p).forEach(function (id) {
+      var el = $(id);
+      if (el.type === "checkbox") el.checked = !!p[id]; else el.value = p[id];
+    });
+    $("bgTransparent").checked = false;
+    $("cornersFollow").checked = true;
+    $("csType").value = ""; $("cdType").value = "";
+    render();
+  });
+
+  // ---- Theme ----------------------------------------------------------------------------------
+  $("theme").addEventListener("click", function () {
+    var root = document.documentElement;
+    var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    root.setAttribute("data-theme", dark ? "light" : "dark");
+  });
+
+  renderKinds();
+  render();
+})();
+</script>
+</body>
+</html>
