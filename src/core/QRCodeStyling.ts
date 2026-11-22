@@ -14,6 +14,7 @@ import toUTF8Bytes, { needsUTF8 } from "../tools/utf8";
 import payload from "../tools/payloads";
 import { configurePlugins } from "../tools/plugins";
 import { hasBrowserDom } from "../tools/svgDom";
+import checkQR, { CheckOptions, CheckResult } from "../tools/check";
 
 export default class QRCodeStyling {
   /** Builders for Wi-Fi, contact, event, e-mail, phone, SMS and location codes: pass the result as `data`. */
@@ -95,23 +96,7 @@ export default class QRCodeStyling {
       return;
     }
 
-    this._qr = qrcode(this._options.qrOptions.typeNumber, this._options.qrOptions.errorCorrectionLevel);
-    const data = this._options.data;
-    if (needsUTF8(data, this._options.qrOptions.encoding)) {
-      // Non-ASCII text (accents, Vietnamese, emoji...) is encoded as UTF-8, which scanners expect.
-      // qrOptions.encoding "latin1" keeps the 1.x one-byte-per-character encoding for Latin-1 text.
-      const generator = qrcode as unknown as { stringToBytes: (text: string) => number[] };
-      const latin1 = generator.stringToBytes;
-      generator.stringToBytes = toUTF8Bytes;
-      try {
-        this._qr.addData(data, this._options.qrOptions.mode || getMode(data));
-      } finally {
-        generator.stringToBytes = latin1;
-      }
-    } else {
-      this._qr.addData(data, this._options.qrOptions.mode || getMode(data));
-    }
-    this._qr.make();
+    this._qr = QRCodeStyling._makeQR(this._options);
 
     if (this._options.type === drawTypes.canvas && !this._canUseCanvas()) {
       // No canvas available (server without node-canvas): draw lazily on getRawData().
@@ -132,6 +117,28 @@ export default class QRCodeStyling {
     }
 
     this.append(this._container);
+  }
+
+  /** Encodes options.data into a QR matrix, without drawing anything. */
+  static _makeQR(options: RequiredOptions): QRCode {
+    const qr = qrcode(options.qrOptions.typeNumber, options.qrOptions.errorCorrectionLevel);
+    const data = options.data;
+    if (needsUTF8(data, options.qrOptions.encoding)) {
+      // Non-ASCII text (accents, Vietnamese, emoji...) is encoded as UTF-8, which scanners expect.
+      // qrOptions.encoding "latin1" keeps the 1.x one-byte-per-character encoding for Latin-1 text.
+      const generator = qrcode as unknown as { stringToBytes: (text: string) => number[] };
+      const latin1 = generator.stringToBytes;
+      generator.stringToBytes = toUTF8Bytes;
+      try {
+        qr.addData(data, options.qrOptions.mode || getMode(data));
+      } finally {
+        generator.stringToBytes = latin1;
+      }
+    } else {
+      qr.addData(data, options.qrOptions.mode || getMode(data));
+    }
+    qr.make();
+    return qr as QRCode;
   }
 
   append(container?: HTMLElement): void {
@@ -256,6 +263,23 @@ export default class QRCodeStyling {
    * Checks that the QR code can be scanned by decoding the rendered picture.
    * With `adjust: true` and QR art, raises art.contrast step by step until it scans.
    */
+  /**
+   * Looks for the usual reasons a code does not scan (contrast, inverted colors, logo size, quiet zone,
+   * module size, density) without drawing or decoding it. Synchronous and works everywhere.
+   * Pass { printWidthMm } to also check the module size for print.
+   */
+  check(checkOptions?: CheckOptions): CheckResult {
+    if (!this._qr) throw "QR code is empty";
+    return checkQR(this._options, this._qr, checkOptions);
+  }
+
+  /** Same as `new QRCodeStyling(options).check(checkOptions)`. */
+  static check(options: Partial<Options>, checkOptions?: CheckOptions): CheckResult {
+    const merged = configurePlugins(sanitizeOptions(mergeDeep(defaultOptions, options) as RequiredOptions));
+    if (!merged.data) throw "QR code is empty";
+    return checkQR(merged, QRCodeStyling._makeQR(merged), checkOptions);
+  }
+
   async verify({ decoder, adjust = false }: VerifyOptions): Promise<VerifyResult> {
     if (!this._qr) throw "QR code is empty";
     if (typeof decoder !== "function")

@@ -41,3 +41,54 @@ for (const framework of ["react", "vue"]) {
     });
   }
 }
+
+// "qr-code-styling-node/print": sheets and PDFs, reusing the core build.
+const useBuilt = (core) => ({
+  name: "use-built",
+  setup(context) {
+    context.onResolve({ filter: /\/core\/QRCodeStyling$/ }, () => ({ path: core, external: true }));
+  }
+});
+
+for (const [format, extension, core] of [
+  ["esm", "mjs", "./qr-code-styling.mjs"],
+  ["cjs", "cjs", "./qr-code-styling.js"]
+]) {
+  await build({
+    entryPoints: ["src/print/index.ts"],
+    outfile: `lib/print.${extension}`,
+    bundle: true,
+    format,
+    platform: "neutral",
+    target: "es2018",
+    sourcemap: true,
+    external: ["qrcode-generator"],
+    plugins: [useBuilt(core)],
+    logLevel: "info"
+  });
+}
+
+// Command line (bin). CommonJS so it can require() optional packages; uses the built core and print.
+await build({
+  entryPoints: ["src/cli/index.ts"],
+  outfile: "lib/cli.cjs",
+  bundle: true,
+  format: "cjs",
+  platform: "node",
+  target: "node18",
+  banner: { js: "#!/usr/bin/env node" },
+  external: ["qrcode-generator"],
+  plugins: [
+    {
+      name: "use-built",
+      setup(context) {
+        context.onResolve({ filter: /\/core\/QRCodeStyling$/ }, () => ({
+          path: "./qr-code-styling.js",
+          external: true
+        }));
+        context.onResolve({ filter: /\/print\/index$/ }, () => ({ path: "./print.cjs", external: true }));
+      }
+    }
+  ],
+  logLevel: "info"
+});
