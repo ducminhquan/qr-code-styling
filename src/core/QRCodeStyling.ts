@@ -12,6 +12,7 @@ import { getContrast } from "../art/art";
 import qrcode from "qrcode-generator";
 import toUTF8Bytes, { needsUTF8 } from "../tools/utf8";
 import payload from "../tools/payloads";
+import templates from "../templates";
 import { configurePlugins } from "../tools/plugins";
 import { hasBrowserDom } from "../tools/svgDom";
 import checkQR, { CheckOptions, CheckResult } from "../tools/check";
@@ -19,6 +20,8 @@ import checkQR, { CheckOptions, CheckResult } from "../tools/check";
 export default class QRCodeStyling {
   /** Builders for Wi-Fi, contact, event, e-mail, phone, SMS and location codes: pass the result as `data`. */
   static payload = payload;
+  /** Ready-made designs, e.g. templates.vietQR({ bank, account, amount, accountName }): pass the result as options. */
+  static templates = templates;
 
   _options: RequiredOptions;
   _container?: HTMLElement;

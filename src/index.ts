@@ -8,8 +8,10 @@ import modes from "./constants/modes";
 import qrTypes from "./constants/qrTypes";
 import drawTypes from "./constants/drawTypes";
 import payload from "./tools/payloads";
+import templates, { vietQRBankNames, formatVND } from "./templates";
 
 export * from "./types";
+export type { VietQRCardOptions, VietQRTheme } from "./templates";
 export type { CheckIssue, CheckLevel, CheckOptions, CheckResult } from "./tools/check";
 export type { WifiOptions, VCardOptions, EventOptions, VietQROptions, GS1Options } from "./tools/payloads";
 
@@ -22,7 +24,10 @@ export {
   modes,
   qrTypes,
   drawTypes,
-  payload
+  payload,
+  templates,
+  vietQRBankNames,
+  formatVND
 };
 
 export default QRCodeStyling;
