@@ -8,7 +8,8 @@ import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import getQRArea from "../tools/qrArea";
 import { getPluginArea, runAfterDraw } from "../tools/plugins";
-import { getCircleLayout, isCircle } from "../tools/circle";
+import { isCircle } from "../tools/circle";
+import { getShapeLayout } from "../tools/codeShape";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
 import { roundedRect, toSVGPath } from "../figures/shapes";
@@ -144,34 +145,36 @@ export default class QRSVG {
           fill: layout.background
         })
       );
-      if (layout.label) {
-        const { x, y, width, height } = layout.label.band;
-        this._element.appendChild(this._svgElement("rect", { x, y, width, height, fill: color }));
-      }
     } else {
       this.drawBackground();
     }
+    layout.labels.forEach(({ band, fill }) => {
+      if (!fill) return;
+      const { x, y, width, height } = band;
+      this._element.appendChild(this._svgElement("rect", { x, y, width, height, fill }));
+    });
 
     const element = inner.getElement();
     element.setAttribute("x", String(layout.qr.x));
     element.setAttribute("y", String(layout.qr.y));
     this._element.appendChild(element);
 
-    if (layout.label) {
-      const { band, color, text, fontSize, fontFamily, fontWeight } = layout.label;
-      const label = this._svgElement("text", {
-        x: band.x + band.width / 2,
-        y: band.y + band.height / 2,
-        fill: color,
-        "font-family": fontFamily,
-        "font-size": fontSize,
-        "font-weight": fontWeight,
-        "text-anchor": "middle",
-        "dominant-baseline": "central"
-      });
-      label.textContent = text;
-      this._element.appendChild(label);
-    }
+    layout.labels.forEach((label) =>
+      label.lines.forEach(({ x, y, color, text, fontSize, fontFamily, fontWeight }) => {
+        const element = this._svgElement("text", {
+          x,
+          y,
+          fill: color,
+          "font-family": fontFamily,
+          "font-size": fontSize,
+          "font-weight": fontWeight,
+          "text-anchor": "middle",
+          "dominant-baseline": "central"
+        });
+        element.textContent = text;
+        this._element.appendChild(element);
+      })
+    );
   }
 
   async drawQR(qr: QRCode): Promise<void> {
@@ -286,6 +289,30 @@ export default class QRSVG {
       const color = options.backgroundOptions?.color;
 
       if (gradientOptions || color) {
+        const shaped = !isCircle(options) && getShapeLayout(options, 21);
+        if (shaped) {
+          // Heart, hexagon...: clip the background to the outline.
+          const size = Math.min(options.width, options.height);
+          const clipPath = this._window.document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+          clipPath.setAttribute("id", "clip-path-background-color");
+          clipPath.appendChild(
+            this._svgElement("path", {
+              d: toSVGPath(shaped.outline((options.width - size) / 2, (options.height - size) / 2, size))
+            })
+          );
+          this._defs.appendChild(clipPath);
+          this._createColor({
+            options: gradientOptions,
+            color: color,
+            additionalRotation: 0,
+            x: (options.width - size) / 2,
+            y: (options.height - size) / 2,
+            height: size,
+            width: size,
+            name: "background-color"
+          });
+          return;
+        }
         if (isCircle(options)) {
           const size = Math.min(options.width, options.height);
           this._createColor({
@@ -329,7 +356,7 @@ export default class QRSVG {
 
     const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
     // Round codes draw decorative dots around the code: the dots color covers the whole circle.
-    const colorPad = isCircle(options) ? getCircleLayout(count).pad * dotSize : 0;
+    const colorPad = (getShapeLayout(options, count)?.pad ?? 0) * dotSize;
     const typeDot = new QRDot({
       svg: this._element,
       type: options.dotsOptions.type,
@@ -360,7 +387,7 @@ export default class QRSVG {
       imageHref: this._dotsImageHref
     });
 
-    const circle = isCircle(options) ? getCircleLayout(count) : undefined;
+    const circle = getShapeLayout(options, count);
     const from = circle ? -circle.pad : 0;
     const to = circle ? count + circle.pad : count;
     const inCode = (i: number, j: number): boolean => i >= 0 && j >= 0 && i < count && j < count;

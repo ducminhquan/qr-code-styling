@@ -6,7 +6,8 @@ import QRCornerDot from "../figures/cornerDot/canvas/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
 import getQRArea from "../tools/qrArea";
 import { getPluginArea, runAfterDraw } from "../tools/plugins";
-import { getCircleLayout, isCircle } from "../tools/circle";
+import { isCircle } from "../tools/circle";
+import { getShapeLayout } from "../tools/codeShape";
 import getCornerTypes, { needsSolidAlignment } from "../tools/cornerTypes";
 import getFrameLayout, { getLogoPlate, hasFrame, innerOptions } from "../tools/frameLayout";
 import { roundedRect, toCanvas } from "../figures/shapes";
@@ -109,25 +110,26 @@ export default class QRCanvas {
       context.clip();
       this.drawBackground();
       context.restore();
-      if (layout.label) {
-        const { x, y, width, height } = layout.label.band;
-        context.fillStyle = color;
-        context.fillRect(x, y, width, height);
-      }
     } else {
       this.drawBackground();
     }
+    layout.labels.forEach(({ band, fill }) => {
+      if (!fill) return;
+      context.fillStyle = fill;
+      context.fillRect(band.x, band.y, band.width, band.height);
+    });
 
     context.drawImage(inner.getCanvas() as unknown as CanvasImageSource, layout.qr.x, layout.qr.y);
 
-    if (layout.label) {
-      const { band, font, color, text } = layout.label;
-      context.font = font;
-      context.fillStyle = color;
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText(text, band.x + band.width / 2, band.y + band.height / 2);
-    }
+    layout.labels.forEach((label) =>
+      label.lines.forEach(({ x, y, font, color, text }) => {
+        context.font = font;
+        context.fillStyle = color;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(text, x, y);
+      })
+    );
   }
 
   async drawQR(qr: QRCode): Promise<void> {
@@ -255,6 +257,17 @@ export default class QRCanvas {
       } else if (options.backgroundOptions.color) {
         canvasContext.fillStyle = options.backgroundOptions.color;
       }
+      const shaped = !isCircle(options) && getShapeLayout(options, 21);
+      if (shaped) {
+        const size = Math.min(this._canvas.width, this._canvas.height);
+        canvasContext.beginPath();
+        toCanvas(
+          canvasContext,
+          shaped.outline((this._canvas.width - size) / 2, (this._canvas.height - size) / 2, size)
+        );
+        canvasContext.fill();
+        return;
+      }
       if (isCircle(options)) {
         const size = Math.min(this._canvas.width, this._canvas.height);
         canvasContext.beginPath();
@@ -286,7 +299,7 @@ export default class QRCanvas {
 
     const { dotSize, x: xBeginning, y: yBeginning } = getQRArea(options, count);
     // Round codes draw decorative dots around the code: the dots color covers the whole circle.
-    const colorPad = isCircle(options) ? getCircleLayout(count).pad * dotSize : 0;
+    const colorPad = (getShapeLayout(options, count)?.pad ?? 0) * dotSize;
     const typeDot = new QRDot({ context: canvasContext, type: options.dotsOptions.type });
     const squareDot = new QRDot({ context: canvasContext, type: "square" });
     const solidAlignment = needsSolidAlignment(options.dotsOptions.type);
@@ -294,7 +307,7 @@ export default class QRCanvas {
 
     canvasContext.beginPath();
 
-    const circle = isCircle(options) ? getCircleLayout(count) : undefined;
+    const circle = getShapeLayout(options, count);
     const from = circle ? -circle.pad : 0;
     const to = circle ? count + circle.pad : count;
     const inCode = (i: number, j: number): boolean => i >= 0 && j >= 0 && i < count && j < count;

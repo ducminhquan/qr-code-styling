@@ -20,10 +20,10 @@ the result and copy the code.
 
 - **One options object.** Everything is an option; nothing to compose or subclass.
 - **Framework-free and light.** One dependency (`qrcode-generator`). React and Vue wrappers are optional.
-- **Pretty out of the box.** 14 dot styles, rounded corners, gradients, logos, frames, labels, round codes and QR art.
+- **Pretty out of the box.** 14 dot styles, rounded corners, gradients, logos, frames, labels, round, heart and other shaped codes, and QR art.
 - **Runs anywhere.** Browser canvas or SVG; on Node, SVG works with no extra packages, PNG with `resvg` or `node-canvas`.
 - **Checks itself.** `check()` flags low contrast, big logos and tiny prints instantly; `verify()` decodes the result so you know a styled code still scans.
-- **Ready for shops.** VietQR bank transfers, GS1 Digital Link product codes, and printable label sheets (PDF) from a CSV file, in code or with `npx`.
+- **Ready for shops.** VietQR bank transfers with ready-made payment cards, GS1 Digital Link product codes, and printable label sheets (PDF) from a CSV file, in code or with `npx`.
 - **Backward compatible.** Code written for 1.5.0 (or for the original `qr-code-styling`) keeps working and draws the same picture. New behaviour is always opt-in.
 
 `qr-code-styling-node` is an independently maintained project. It started as a fork of
@@ -35,7 +35,7 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed. Found a bug or have an idea?
 
 - [Installation](#installation)
 - [Quick start](#quick-start): [browser](#in-the-browser), [bundler / TypeScript](#with-a-bundler-or-typescript), [React and Vue](#react-and-vue), [Node.js](#on-nodejs)
-- Guides: [dots and corners](#dots-and-corners), [frames and labels](#frames-and-labels), [round codes](#round-codes),
+- Guides: [dots and corners](#dots-and-corners), [frames and labels](#frames-and-labels), [round codes and other shapes](#round-codes-and-other-shapes),
   [QR art](#qr-art), [Wi-Fi, contacts and events](#wi-fi-contacts-events-and-more), [download and share](#download-and-share),
   [VietQR payments](#vietqr-bank-transfers), [GS1 product codes](#gs1-digital-link-product-codes),
   [checking that a code scans](#checking-that-a-code-scans), [printing many codes](#printing-many-codes),
@@ -221,7 +221,31 @@ new QRCodeStyling({
 
 The frame and label are drawn inside `width` x `height`, and the code shrinks to fit.
 
-### Round codes
+For a label on top and another at the bottom, pass an array. A label can have several lines, each with its own
+size, weight and color, and `background: "none"` puts the text on the card instead of a colored band:
+
+```js
+new QRCodeStyling({
+  data: "https://example.com",
+  width: 600,
+  height: 800,
+  frameOptions: { color: "#0b4ea2", radius: 30 },
+  labelOptions: [
+    { position: "top", text: "Quét mã để thanh toán" },
+    {
+      position: "bottom",
+      background: "none",
+      lines: [
+        { text: "150.000 đ", fontSize: 44, fontWeight: 800, color: "#0b4ea2" },
+        { text: "NHÀ THUỐC LONG CHÂU", fontSize: 26, color: "#111827" },
+        { text: "Vietcombank · 0011001234567", fontSize: 22, fontWeight: 400, color: "#374151" }
+      ]
+    }
+  ]
+});
+```
+
+### Round codes and other shapes
 
 <img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/circle_examples.png" width="720" />
 
@@ -235,6 +259,22 @@ new QRCodeStyling({ data: "https://example.com", shape: "circle", dotsOptions: {
 
 A round code has smaller modules than a square one of the same size: keep it at least about 240 px for short data,
 and check it with `verify()`.
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/shape_examples.png" width="720" />
+
+`shape` also takes `"heart"`, `"hexagon"`, `"octagon"` and `"diamond"`, built the same way: the code stays square
+in the middle with its quiet ring, the rest of the outline is decoration, and the background is cut to the outline.
+
+```js
+new QRCodeStyling({
+  data: "https://example.com",
+  shape: "heart",
+  dotsOptions: { type: "rounded", color: "#e11d48" },
+  backgroundOptions: { color: "#fff1f2" }
+});
+```
+
+The heart needs the most room around the code, so its modules are smallest: give it 400 px or more, and short data.
 
 ### QR art
 
@@ -319,6 +359,37 @@ payload.vietQR({ bank: "970422", account: "9704221234567890", type: "card" }); /
 `payload.vietQRBanks` lists the BINs of common banks (VCB, CTG, BIDV, AGRIBANK, TCB, MB, ACB, VPB, TPB, STB,
 HDB, VIB, SHB, OCB, MSB, SEAB, EIB, LPB, NAB). For other banks pass the BIN from the NAPAS list. Always scan a
 new payment code with a banking app before printing it.
+
+#### Ready-made payment cards
+
+<img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/vietqr_examples.png" width="720" />
+
+`templates.vietQR()` takes the same fields plus a few for the design, and returns options for a finished card:
+theme colors, rounded dots, a header, and the amount, account name, bank and description under the code.
+
+```js
+import QRCodeStyling, { templates } from "qr-code-styling-node";
+
+const qrCode = new QRCodeStyling(
+  templates.vietQR({
+    bank: "VCB",
+    account: "0011001234567",
+    amount: 150000,
+    message: "Don LC1024",
+    accountName: "Nhà thuốc Long Châu", // shown on the card, accents allowed
+    theme: "blue",                      // blue, red, green, purple, orange, black, or color: "#0b5394"
+    logo: "https://example.com/shop-logo.svg", // optional, in the middle of the code
+    title: "Quét mã để thanh toán",     // header; "" for none
+    width: 600                          // the height follows from the texts
+  })
+);
+
+// It returns plain options, so you can change or add any of them:
+new QRCodeStyling({ ...templates.vietQR({ bank: "MB", account: "0123456789" }), shape: "heart", type: "svg" });
+```
+
+`layout: "plain"` gives just the styled code, without frame or texts. No bank logos are bundled: pass a logo you
+are allowed to use. `formatVND(150000)` gives `"150.000 đ"` and `vietQRBankNames` maps BINs to bank names.
 
 ### GS1 Digital Link product codes
 
@@ -501,7 +572,7 @@ width               |number                                |`300`     |Width of 
 height              |number                                |`300`     |Height of the output in px
 type                |`'canvas'` \| `'svg'`                 |`'canvas'`|Element to render
 margin              |number                                |`0`       |Space around the code in px
-shape               |`'square'` \| `'circle'`              |`'square'`|`'circle'` draws a round code, see [round codes](#round-codes)
+shape               |`'square'` \| `'circle'` \| `'heart'` \| `'hexagon'` \| `'octagon'` \| `'diamond'`|`'square'`|A shaped code, see [round codes and other shapes](#round-codes-and-other-shapes)
 qrOptions           |object                                |          |Encoding options, see below
 image               |string                                |          |Logo in the middle (URL or data URL)
 imageOptions        |object                                |          |Logo options, see below
@@ -510,7 +581,7 @@ cornersSquareOptions|object                                |          |Finder ri
 cornersDotOptions   |object                                |          |Finder center style, see below
 backgroundOptions   |object                                |          |Background, see below
 frameOptions        |object                                |          |Border around the code, see below
-labelOptions        |object                                |          |Text above or below the code, see below
+labelOptions        |object \| object[]                    |          |Text above and/or below the code, see below
 art                 |object                                |          |QR art, see below
 svgOptions          |`{ mergePaths?: boolean }`            |          |SVG only: `mergePaths: true` draws all dots as one path
 plugins             |array                                 |          |See [plugins](#plugins)
@@ -583,12 +654,14 @@ padding |number|4% of the size|Space between the frame and the code in px
 
 Property  |Type                    |Default                               |Description
 ----------|------------------------|--------------------------------------|-------------------
-text      |string                  |                                      |The text. Required
+text      |string                  |                                      |The text; `"\n"` starts a new line
+lines     |`{ text, fontSize, fontWeight, color, fontFamily }[]`|      |Lines with their own style, instead of `text`
 position  |`'top'` \| `'bottom'`   |`'bottom'`                            |Where the label goes
-color     |string                  |white on a frame, else the dots color |Text color
+color     |string                  |white on a frame band, else the dots color|Text color
 fontSize  |number                  |7% of the size                        |In px
 fontFamily|string                  |`'Helvetica, Arial, sans-serif'`      |
 fontWeight|string \| number        |`'bold'`                              |
+background|string                  |the frame color with a frame, else none|Band color, or `'none'`
 
 `art`
 
@@ -620,6 +693,9 @@ Method                                         |Returns                         
 `errorCorrectionPercents`, `modes`, `qrTypes`, `drawTypes`, and TypeScript types such as `Options`, `QRPlugin`,
 `WifiOptions`, `VCardOptions`, `EventOptions`, `VietQROptions`, `GS1Options` and `CheckResult`.
 
+Also `templates` (`templates.vietQR`), `formatVND`, `vietQRBankNames` and the types `VietQRCardOptions` and
+`VietQRTheme`.
+
 `qr-code-styling-node/print` exports `sheet`, `pdf`, `parseCSV`, `fillTemplate`, `pageSize` and `embedSVG`.
 
 ## Upgrading from 1.5.0
@@ -644,9 +720,13 @@ npm run lint      # eslint + prettier
 npm run build     # lib/: UMD, CommonJS, ES module, React and Vue wrappers, types
 npm run playground # builds the playground into site/
 npm start         # dev server
+npm run commit    # write a commit message step by step (commitizen)
 ```
 
-`npm run art-examples`, `blend-examples`, `circle-examples`, `dot-examples` and `style-examples` regenerate the
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat(vietqr): ...`,
+`fix: ...`, `docs: ...`). `npm install` sets up a git hook that checks each message with commitlint.
+
+`npm run art-examples`, `blend-examples`, `circle-examples`, `dot-examples`, `retail-examples`, `style-examples` and `template-examples` regenerate the
 images in this README.
 
 ## License

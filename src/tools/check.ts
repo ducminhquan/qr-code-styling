@@ -2,7 +2,7 @@ import { RequiredOptions } from "../core/QROptions";
 import { Gradient, QRCode } from "../types";
 import errorCorrectionPercents from "../constants/errorCorrectionPercents";
 import getFrameLayout, { hasFrame } from "./frameLayout";
-import { getCircleLayout } from "./circle";
+import { getShapeLayout } from "./codeShape";
 
 export type CheckLevel = "error" | "warning" | "info";
 
@@ -125,7 +125,7 @@ export default function checkQR(options: RequiredOptions, qr: QRCode, checkOptio
     regionSize = Math.min(options.width, options.height) - options.margin * 2;
     quietPx = options.margin;
   }
-  const gridSize = options.shape === "circle" ? getCircleLayout(modules).size : modules;
+  const gridSize = getShapeLayout(options, modules)?.size ?? modules;
   const moduleSize = Math.floor(regionSize / gridSize);
   quietPx += (regionSize - modules * moduleSize) / 2;
 

@@ -23,7 +23,7 @@ export type CornerSquareType = "dot" | "square" | "extra-rounded" | "rounded";
 export type Extension = "svg" | "png" | "jpeg" | "webp";
 export type GradientType = "radial" | "linear";
 export type DrawType = "canvas" | "svg";
-export type ShapeType = "square" | "circle";
+export type ShapeType = "square" | "circle" | "heart" | "hexagon" | "octagon" | "diamond";
 
 export interface Canvas extends HTMLCanvasElement {
   toBuffer?: (type: string) => Buffer;
@@ -209,22 +209,37 @@ export interface FrameOptions {
   padding?: number;
 }
 
-export interface LabelOptions {
+export interface LabelLineOptions {
   text: string;
-  position?: "top" | "bottom";
-  /** Default white on a frame, otherwise the dots color. */
+  /** Each defaults to the label's own setting. */
   color?: string;
-  /** In px. Default 7% of the size. */
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string | number;
 }
 
+export interface LabelOptions {
+  /** The text. A line break ("\n") starts a new line. */
+  text?: string;
+  /** Several lines, each with its own size, weight or color (instead of text). */
+  lines?: LabelLineOptions[];
+  position?: "top" | "bottom";
+  /** Default white on a frame band, otherwise the dots color. */
+  color?: string;
+  /** In px. Default 7% of the size. */
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  /** Fill of the label's band: a color, or "none". Default the frame color when there is a frame, otherwise none. */
+  background?: string;
+}
+
 export type Options = {
   type?: DrawType;
   /**
-   * "circle": a round QR code. The real code stays square in the middle and the rest of the circle is
-   * filled with decorative dots in the same style; the background becomes a circle. Default "square".
+   * "circle", "heart", "hexagon", "octagon" or "diamond": a shaped QR code. The real code stays square in
+   * the middle and the rest of the shape is filled with decorative dots in the same style; the background
+   * takes the shape. Default "square".
    */
   shape?: ShapeType;
   /** SVG output only. */
@@ -250,8 +265,11 @@ export type Options = {
   art?: ArtOptions;
   /** A border around the code. The code shrinks to fit inside width x height. */
   frameOptions?: FrameOptions;
-  /** A line of text above or below the code, such as "Scan to order". */
-  labelOptions?: LabelOptions;
+  /**
+   * Text above or below the code, such as "Scan to order". Pass an array for a label on top and one at the
+   * bottom; each can have several lines.
+   */
+  labelOptions?: LabelOptions | LabelOptions[];
   qrOptions?: {
     typeNumber?: TypeNumber;
     mode?: Mode;

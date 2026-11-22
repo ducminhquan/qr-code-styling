@@ -31,7 +31,11 @@ export default function getCornerTypes(options: RequiredOptions): {
   dot?: CornerDotType;
 } {
   const type = options.dotsOptions.type;
-  if (options.art?.mode === "blend" || options.shape === "circle" || SOLID_ROUND_DOT_TYPES.indexOf(type) !== -1) {
+  if (
+    options.art?.mode === "blend" ||
+    (!!options.shape && options.shape !== "square") ||
+    SOLID_ROUND_DOT_TYPES.indexOf(type) !== -1
+  ) {
     // Blend art draws only some of the dots, round codes surround the finders with decoration, and
     // fluid dots thin the finder rings, so finders
     // made of dots would not scan well: they are drawn solid, round when the dots are round.
