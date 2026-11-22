@@ -77,6 +77,41 @@ The package ships an ES module build (`import`), a CommonJS/UMD build (`require`
 
 ---
 
+### React and Vue
+
+The core stays framework-free. Thin wrappers ship in the same package; React and Vue are optional peer dependencies.
+
+```jsx
+import { QRCode } from "qr-code-styling-node/react";
+
+function Poster() {
+  const qr = useRef();
+  return (
+    <>
+      <QRCode ref={qr} options={{ data: "https://example.com", dotsOptions: { type: "fluid" } }} />
+      <button onClick={() => qr.current.download({ extension: "png" })}>Download</button>
+    </>
+  );
+}
+```
+
+```vue
+<script setup>
+import { ref } from "vue";
+import { QRCode } from "qr-code-styling-node/vue";
+const qr = ref();
+const options = ref({ data: "https://example.com", shape: "circle" });
+</script>
+
+<template>
+  <QRCode ref="qr" :options="options" @update="(qrCode) => console.log('drawn', qrCode)" />
+  <button @click="qr.share({ name: 'qr' })">Share</button>
+</template>
+```
+
+Both redraw only when the options really change (a new but equal object does not redraw). The React ref is the
+`QRCodeStyling` instance; the Vue ref exposes `qrCode`, `download`, `share` and `getRawData`.
+
 ### More styles, frames and labels
 
 <img src="https://raw.githubusercontent.com/ducminhquan/qr-code-styling/master/src/assets/style_examples.png" width="720" />

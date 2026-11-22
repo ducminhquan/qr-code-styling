@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.0
+
+React and Vue wrappers. The core and its output are unchanged.
+
+### Added
+- `qr-code-styling-node/react`: `<QRCode options={...} />`, with a ref to the `QRCodeStyling` instance and an `onUpdate` callback.
+- `qr-code-styling-node/vue`: `<QRCode :options="..." />` for Vue 3, exposing `qrCode`, `download`, `share` and `getRawData`, and emitting `update`.
+- Both redraw only when the options change by value, and import the core build instead of bundling a copy (about 2 KB each). React and Vue are optional peer dependencies.
+
 ## 1.13.0
 
 Plugins. Without plugins, output is unchanged.
