@@ -255,17 +255,19 @@ export default class QRCodeStyling {
     const paddedWidth = width + pad * 2;
     const paddedHeight = height + pad * 2;
     const padded = new Uint8ClampedArray(paddedWidth * paddedHeight * 4).fill(255);
+    // Put see-through pixels on white too: decoders ignore alpha, so a transparent background reads as black.
     for (let y = 0; y < height; y++) {
-      padded.set(data.subarray(y * width * 4, (y + 1) * width * 4), ((y + pad) * paddedWidth + pad) * 4);
+      for (let x = 0; x < width; x++) {
+        const from = (y * width + x) * 4;
+        const to = ((y + pad) * paddedWidth + pad + x) * 4;
+        const alpha = data[from + 3] / 255;
+        for (let c = 0; c < 3; c++) padded[to + c] = Math.round(data[from + c] * alpha + 255 * (1 - alpha));
+      }
     }
     const result = decoder(padded, paddedWidth, paddedHeight, { inversionAttempts: "attemptBoth" });
     return result ? result.data : undefined;
   }
 
-  /**
-   * Checks that the QR code can be scanned by decoding the rendered picture.
-   * With `adjust: true` and QR art, raises art.contrast step by step until it scans.
-   */
   /**
    * Looks for the usual reasons a code does not scan (contrast, inverted colors, logo size, quiet zone,
    * module size, density) without drawing or decoding it. Synchronous and works everywhere.
@@ -283,6 +285,10 @@ export default class QRCodeStyling {
     return checkQR(merged, QRCodeStyling._makeQR(merged), checkOptions);
   }
 
+  /**
+   * Checks that the QR code can be scanned by decoding the rendered picture.
+   * With `adjust: true` and QR art, raises art.contrast step by step until it scans.
+   */
   async verify({ decoder, adjust = false }: VerifyOptions): Promise<VerifyResult> {
     if (!this._qr) throw "QR code is empty";
     if (typeof decoder !== "function")

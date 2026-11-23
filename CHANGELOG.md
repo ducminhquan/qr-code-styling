@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.2.1
+
+Fixes found by testing every combination in the playground.
+
+### Fixed
+- Canvas: a shaped code (circle, heart...) inside a frame or with labels filled the whole card with the frame
+  color and drew its white shape over the labels. The card panel is now plain, as in SVG.
+- Heart, hexagon, octagon and diamond: the background now hugs the dots. With long data the dots are drawn on
+  whole pixels and could end up much smaller than a background drawn at full size.
+- Label lines that are too long for the card (a long account name) shrink to fit instead of running off it.
+- `verify()` reads codes on a transparent background: see-through pixels are put on white before decoding.
+
+### Added
+- `check()` warns with `label-contrast` when label text is hard to read on its band or panel.
+
+### Playground
+- Turning off the frame, label or logo now takes effect (options were merged into the previous code).
+- The logo applies to VietQR cards.
+
 ## 2.2.0
 
 Payment cards and shaped codes. Existing options draw exactly the same picture.

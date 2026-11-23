@@ -67,6 +67,20 @@ const labelLines = (
   }));
 };
 
+/** Rough width of a text in em for common sans-serif fonts; enough to keep labels inside the frame. */
+const textWidthEm = (text: string, fontWeight: string): number => {
+  let em = 0;
+  for (const char of text.normalize("NFC")) {
+    if (char === " ") em += 0.28;
+    else if (/[.,:;'|!iIl·]/.test(char)) em += 0.3;
+    else if (/[MWmw@]/.test(char)) em += 0.86;
+    else if (char !== char.toLowerCase()) em += 0.7;
+    else em += 0.57;
+  }
+  const bold = fontWeight === "bold" || Number(fontWeight) >= 600;
+  return em * (bold ? 1.06 : 1);
+};
+
 /** Height of a label's band in px: 1.8 x the font size for one line, 1.3 per line plus a margin for more. */
 export const labelBandHeight = (label: LabelOptions, unit: number): number => {
   const lines = labelLines(label, unit);
@@ -129,13 +143,17 @@ export default function getFrameLayout(options: RequiredOptions): FrameLayout {
           center = y + (line.fontSize * 1.3) / 2;
           y += line.fontSize * 1.3;
         }
+        // Shrink a line that would not fit the width, e.g. a long account name.
+        const room = band.width * 0.92;
+        const wide = textWidthEm(line.text, line.fontWeight) * line.fontSize;
+        const fontSize = wide > room ? Math.max(6, Math.floor((line.fontSize * room) / wide)) : line.fontSize;
         return {
           text: line.text,
           x: band.x + band.width / 2,
           y: center,
           color: line.color ?? defaultColor,
-          font: `${line.fontWeight} ${line.fontSize}px ${line.fontFamily}`,
-          fontSize: line.fontSize,
+          font: `${line.fontWeight} ${fontSize}px ${line.fontFamily}`,
+          fontSize,
           fontFamily: line.fontFamily,
           fontWeight: line.fontWeight
         };

@@ -4,7 +4,7 @@ import QRDot from "../figures/dot/canvas/QRDot";
 import QRCornerSquare from "../figures/cornerSquare/canvas/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/canvas/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
-import getQRArea from "../tools/qrArea";
+import getQRArea, { getShapeBox } from "../tools/qrArea";
 import { getPluginArea, runAfterDraw } from "../tools/plugins";
 import { isCircle } from "../tools/circle";
 import { getShapeLayout } from "../tools/codeShape";
@@ -108,10 +108,10 @@ export default class QRCanvas {
         )
       );
       context.clip();
-      this.drawBackground();
+      this.drawBackground(true);
       context.restore();
     } else {
-      this.drawBackground();
+      this.drawBackground(true);
     }
     layout.labels.forEach(({ band, fill }) => {
       if (!fill) return;
@@ -233,7 +233,8 @@ export default class QRCanvas {
     }
   }
 
-  drawBackground(): void {
+  /** plain: fill the whole area, ignoring the shape (the panel behind a framed or labelled code). */
+  drawBackground(plain = false): void {
     const canvasContext = this.context;
     const options = this._options;
 
@@ -257,18 +258,17 @@ export default class QRCanvas {
       } else if (options.backgroundOptions.color) {
         canvasContext.fillStyle = options.backgroundOptions.color;
       }
-      const shaped = !isCircle(options) && getShapeLayout(options, 21);
+      const count = this._qr?.getModuleCount() ?? 21;
+      const shaped = !plain && !isCircle(options) && getShapeLayout(options, count);
       if (shaped) {
-        const size = Math.min(this._canvas.width, this._canvas.height);
+        // Heart, hexagon...: fill the outline around the dots.
+        const { x, y, size } = getShapeBox(options, count);
         canvasContext.beginPath();
-        toCanvas(
-          canvasContext,
-          shaped.outline((this._canvas.width - size) / 2, (this._canvas.height - size) / 2, size)
-        );
+        toCanvas(canvasContext, shaped.outline(x, y, size));
         canvasContext.fill();
         return;
       }
-      if (isCircle(options)) {
+      if (!plain && isCircle(options)) {
         const size = Math.min(this._canvas.width, this._canvas.height);
         canvasContext.beginPath();
         canvasContext.arc(this._canvas.width / 2, this._canvas.height / 2, size / 2, 0, Math.PI * 2);
