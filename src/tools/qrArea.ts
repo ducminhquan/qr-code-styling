@@ -35,3 +35,16 @@ export default function getQRArea(options: RequiredOptions, count: number): QRAr
     y: Math.floor((options.height - count * dotSize) / 2)
   };
 }
+
+/**
+ * Square that a shaped background (heart, hexagon...) is drawn in: the grid the dots are actually drawn
+ * on plus the margin around it. Whole-pixel module sizes can make that grid smaller than the image, and
+ * the background must follow the dots, not the image.
+ */
+export function getShapeBox(options: RequiredOptions, count: number): { x: number; y: number; size: number } {
+  const { dotSize, x, y } = getQRArea(options, count);
+  const grid = (getShapeLayout(options, count)?.size ?? count) * dotSize;
+  const size = Math.min(grid + options.margin * 2, Math.min(options.width, options.height));
+  const center = { x: x + (count * dotSize) / 2, y: y + (count * dotSize) / 2 };
+  return { x: center.x - size / 2, y: center.y - size / 2, size };
+}

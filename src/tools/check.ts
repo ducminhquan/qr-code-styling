@@ -121,6 +121,26 @@ export default function checkQR(options: RequiredOptions, qr: QRCode, checkOptio
     const layout = getFrameLayout(options);
     regionSize = layout.qr.size;
     quietPx = layout.qr.x - (layout.frame?.thickness ?? 0);
+    // Label text must stay readable on what is behind it: the label's band, or the panel.
+    const hard = new Set<string>();
+    layout.labels.forEach(({ fill, lines }) => {
+      const behind = parseCSSColor(fill ?? (options.backgroundOptions.gradient ? undefined : layout.background));
+      if (!behind || behind[3] < 1) return;
+      lines.forEach(({ text, color }) => {
+        const ink = parseCSSColor(color);
+        if (ink && text && contrastRatio(over(ink, behind), behind) < 3) hard.add(text);
+      });
+    });
+    if (hard.size) {
+      const names = Array.from(hard)
+        .map((text) => `"${text}"`)
+        .join(", ");
+      add(
+        "warning",
+        "label-contrast",
+        `Label text ${names} is hard to read on its background; use a contrast of 3:1 or more.`
+      );
+    }
   } else {
     regionSize = Math.min(options.width, options.height) - options.margin * 2;
     quietPx = options.margin;

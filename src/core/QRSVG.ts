@@ -6,7 +6,7 @@ import PathRecorder from "../tools/pathRecorder";
 import QRCornerSquare from "../figures/cornerSquare/svg/QRCornerSquare";
 import QRCornerDot from "../figures/cornerDot/svg/QRCornerDot";
 import { RequiredOptions } from "./QROptions";
-import getQRArea from "../tools/qrArea";
+import getQRArea, { getShapeBox } from "../tools/qrArea";
 import { getPluginArea, runAfterDraw } from "../tools/plugins";
 import { isCircle } from "../tools/circle";
 import { getShapeLayout } from "../tools/codeShape";
@@ -146,7 +146,7 @@ export default class QRSVG {
         })
       );
     } else {
-      this.drawBackground();
+      this.drawBackground(true);
     }
     layout.labels.forEach(({ band, fill }) => {
       if (!fill) return;
@@ -280,7 +280,8 @@ export default class QRSVG {
     }
   }
 
-  drawBackground(): void {
+  /** plain: fill the whole area, ignoring the shape (the panel behind a framed or labelled code). */
+  drawBackground(plain = false): void {
     const element = this._element;
     const options = this._options;
 
@@ -289,15 +290,16 @@ export default class QRSVG {
       const color = options.backgroundOptions?.color;
 
       if (gradientOptions || color) {
-        const shaped = !isCircle(options) && getShapeLayout(options, 21);
+        const count = this._qr?.getModuleCount() ?? 21;
+        const shaped = !plain && !isCircle(options) && getShapeLayout(options, count);
         if (shaped) {
-          // Heart, hexagon...: clip the background to the outline.
-          const size = Math.min(options.width, options.height);
+          // Heart, hexagon...: clip the background to the outline around the dots.
+          const { x: boxX, y: boxY, size } = getShapeBox(options, count);
           const clipPath = this._window.document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
           clipPath.setAttribute("id", "clip-path-background-color");
           clipPath.appendChild(
             this._svgElement("path", {
-              d: toSVGPath(shaped.outline((options.width - size) / 2, (options.height - size) / 2, size))
+              d: toSVGPath(shaped.outline(boxX, boxY, size))
             })
           );
           this._defs.appendChild(clipPath);
@@ -305,15 +307,15 @@ export default class QRSVG {
             options: gradientOptions,
             color: color,
             additionalRotation: 0,
-            x: (options.width - size) / 2,
-            y: (options.height - size) / 2,
+            x: boxX,
+            y: boxY,
             height: size,
             width: size,
             name: "background-color"
           });
           return;
         }
-        if (isCircle(options)) {
+        if (!plain && isCircle(options)) {
           const size = Math.min(options.width, options.height);
           this._createColor({
             options: gradientOptions,

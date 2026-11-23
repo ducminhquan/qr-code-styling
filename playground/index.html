@@ -319,8 +319,10 @@ pre {
       ["account", "Account number", "text", "0011001234567"], ["amount", "Amount (VND, optional)", "text", "150000"],
       ["accountName", "Account name", "text", "Nhà thuốc Long Châu"], ["message", "Description", "text", "Don LC1024"],
       ["theme", "Theme", ["blue", "red", "green", "purple", "orange", "black"], "blue"]],
-      build: function (v) { var o = clean(v); var t = QRCodeStyling.templates.vietQR(o);
-        return { data: t.data, code: "templates.vietQR(" + js(o) + ")", template: t }; } },
+      build: function (v) { var o = clean(v);
+        var t = QRCodeStyling.templates.vietQR(logo ? Object.assign({ logo: logo }, o) : o);
+        var shown = logo ? Object.assign({}, o, { logo: logo === SAMPLE_LOGO ? "https://example.com/logo.svg" : "logo.png" }) : o;
+        return { data: t.data, code: "templates.vietQR(" + js(shown) + ")", template: t }; } },
     gs1: { label: "GS1 product", fields: [["gtin", "GTIN (barcode number)", "text", "8935049500131"],
       ["lot", "Batch / lot", "text", "A12"], ["expiry", "Expiry (YYYY-MM-DD)", "text", "2027-06-30"],
       ["domain", "Your resolver (optional)", "url", ""]],
@@ -536,16 +538,11 @@ pre {
     current = collect();
     var stage = $("stage");
     try {
-      // Templates set many options at once: start from a fresh code when switching to or from one.
-      var templateChanged = !!(qr && qr._fromTemplate) !== !!current.templateCode;
-      if (!qr || qr._options.type !== current.options.type || templateChanged) {
-        qr = new QRCodeStyling(current.options);
-        qr._fromTemplate = !!current.templateCode;
-        stage.innerHTML = "";
-        qr.append(stage);
-      } else {
-        qr.update(current.options);
-      }
+      // A fresh code every time: update() merges options, so a frame, label or logo that was switched
+      // off would otherwise stay.
+      qr = new QRCodeStyling(current.options);
+      stage.innerHTML = "";
+      qr.append(stage);
       stage.classList.toggle("tall", current.options.height > current.options.width);
       showCheck();
     } catch (err) {
