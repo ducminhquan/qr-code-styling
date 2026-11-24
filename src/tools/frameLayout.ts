@@ -186,7 +186,8 @@ export const innerOptions = (options: RequiredOptions, size: number): RequiredOp
   margin: 0,
   frameOptions: undefined,
   labelOptions: undefined,
-  plugins: undefined
+  plugins: undefined,
+  title: undefined
 });
 
 /** Area behind the logo: the logo box including its margin, with rounded corners. */
