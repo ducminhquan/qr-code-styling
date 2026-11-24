@@ -10,9 +10,6 @@ const REFERENCE_ATTRIBUTES = ["clip-path", "fill", "stroke", "mask", "filter", "
  * references to ids the code does not define, so they cannot pick up another code's element.
  */
 export function prefixSvgIds(svg: Element, prefix: string): void {
-  const elements = Array.from(svg.querySelectorAll("[id]"));
-  elements.forEach((element) => element.setAttribute("id", prefix + element.getAttribute("id")));
-
   const rename = (name: string, value: string): string =>
     name.endsWith("href")
       ? value.replace(/^#(.+)$/, (_match, id: string) => `#${prefix}${id}`)
@@ -22,7 +19,10 @@ export function prefixSvgIds(svg: Element, prefix: string): void {
           (_match, quote: string, id: string) => `url(${quote}#${prefix}${id}${quote})`
         );
 
-  [svg, ...Array.from(svg.querySelectorAll("*"))].forEach((element) => {
+  // Walks childNodes with getAttribute/setAttribute only, so it also works on the DOM-free SVG used on Node.
+  const visit = (element: Element): void => {
+    const id = element.getAttribute("id");
+    if (id) element.setAttribute("id", prefix + id);
     REFERENCE_ATTRIBUTES.forEach((name) => {
       const value = element.getAttribute(name);
       if (value && value.includes("#")) {
@@ -30,7 +30,11 @@ export function prefixSvgIds(svg: Element, prefix: string): void {
         if (renamed !== value) element.setAttribute(name, renamed);
       }
     });
-  });
+    Array.from(element.childNodes as ArrayLike<Node>).forEach((child) => {
+      if (typeof (child as Element).getAttribute === "function") visit(child as Element);
+    });
+  };
+  visit(svg);
 }
 
 /**
