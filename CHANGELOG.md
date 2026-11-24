@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.4.0
+
+Accessibility and shorter docs. Existing options draw exactly the same picture.
+
+### Added
+- `title`: an accessible name for screen readers. The SVG gets `role="img"`, `aria-label` and a `<title>`; a
+  browser canvas gets `role="img"` and `aria-label`. Works in the React and Vue components and in server
+  rendering.
+
+### Docs
+- The README is now a short introduction with install and quick start. The guides moved to
+  [docs/guides.md](docs/guides.md) and the API reference to [docs/api.md](docs/api.md).
+
+### Release
+- "Publish to npm" stops before staging when `CHANGELOG.md` has no section for the version, so every GitHub
+  release gets its notes.
+
 ## 2.3.0
 
 Server rendering for the React and Vue components. Existing options draw exactly the same picture.
