@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.2.2
+
+Bug fixes. A code that drew correctly before draws exactly the same picture and markup.
+
+### Fixed
+- Browser: a logo that fails to load (wrong URL, blocked by CORS, broken file) no longer leaves the code
+  undrawn with `getRawData()` and `download()` never finishing. The code is drawn without the logo and a
+  warning is logged. On Node a failed logo still rejects, as before.
+- Several SVG codes on one page no longer take each other's colors and gradients. A code shown with
+  `append()` whose ids are already used by an earlier code on the page gets ids of its own; the first code
+  keeps its ids.
+- The `<script>` bundle runs on pages without `<meta charset="utf-8">` (it threw "Range out of order in
+  character class" since 2.1.0).
+
+### Added
+- `idPrefix`: puts a prefix in front of every id in the SVG, for pages that inline several
+  `getRawData("svg")` strings.
+
 ## 2.2.1
 
 Fixes found by testing every combination in the playground.

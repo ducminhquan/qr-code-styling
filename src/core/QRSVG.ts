@@ -207,18 +207,17 @@ export default class QRSVG {
 
     this._qr = qr;
 
-    if (this._options.image) {
+    const logo = this._options.image ? await this._tryLoadImage() : undefined;
+    if (logo) {
       //We need it to get image size
-      await this.loadImage();
-      if (!this._image) return;
       this.imageToBlob();
       const { imageOptions, qrOptions } = this._options;
       const coverLevel = imageOptions.imageSize * errorCorrectionPercents[qrOptions.errorCorrectionLevel];
       const maxHiddenDots = Math.floor(coverLevel * count * count);
 
       drawImageSize = calculateImageSize({
-        originalWidth: this._image.width,
-        originalHeight: this._image.height,
+        originalWidth: logo.width,
+        originalHeight: logo.height,
         maxHiddenDots,
         maxHiddenAxisDots: count - 14,
         dotSize
@@ -275,7 +274,7 @@ export default class QRSVG {
     this.drawCorners();
     this._finderColors = undefined;
 
-    if (this._options.image) {
+    if (this._options.image && this._image) {
       this.drawImage({ width: drawImageSize.width, height: drawImageSize.height, count, dotSize });
     }
   }
@@ -653,6 +652,16 @@ export default class QRSVG {
     }
   }
 
+  /**
+   * Loads the logo and says whether there is one to draw. In the browser a logo that fails to load (bad URL,
+   * CORS, broken file) is left out and the code is drawn without it, instead of the draw never finishing.
+   * On Node a failed logo still rejects, as before.
+   */
+  async _tryLoadImage(): Promise<HTMLImageElement | undefined> {
+    await this.loadImage();
+    return this._image;
+  }
+
   loadImage(): Promise<void> {
     if (this._virtual) {
       return this._loadImageWithoutDom();
@@ -683,6 +692,12 @@ export default class QRSVG {
 
       this._image = image;
       image.onload = (): void => {
+        resolve();
+      };
+      image.onerror = (): void => {
+        console.warn("qr-code-styling: the logo could not be loaded and was left out:", options.image);
+        this._image = undefined;
+        this._imageUri = undefined;
         resolve();
       };
       image.src = options.image;

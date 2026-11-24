@@ -584,6 +584,7 @@ frameOptions        |object                                |          |Border ar
 labelOptions        |object \| object[]                    |          |Text above and/or below the code, see below
 art                 |object                                |          |QR art, see below
 svgOptions          |`{ mergePaths?: boolean }`            |          |SVG only: `mergePaths: true` draws all dots as one path
+idPrefix            |string                                |          |SVG only: put in front of every id in the SVG, for several `getRawData("svg")` strings in one page. Codes shown with `append()` get unique ids by themselves
 plugins             |array                                 |          |See [plugins](#plugins)
 nodeCanvas          |`canvas` module                       |          |Node only. Canvas output (png, jpeg, webp) and QR art on a server
 resvg               |`Resvg` from `@resvg/resvg-js`        |          |Node only. PNG without node-canvas

@@ -127,3 +127,14 @@ describe("PNG with resvg instead of node-canvas", () => {
     await expect(new QRCodeStyling({ data: "j", resvg: Resvg }).getRawData("jpeg")).rejects.toThrow(/only produce png/);
   });
 });
+
+describe("idPrefix without a DOM", () => {
+  it("prefixes ids and references in the SVG string", async () => {
+    const svg = (
+      await new QRCodeStyling({ data: "prefix", type: "svg", idPrefix: "menu-" }).getRawData("svg")
+    ).toString();
+    expect(svg).toContain('id="menu-clip-path-dot-color"');
+    expect(svg).toContain("url('#menu-clip-path-dot-color')");
+    expect(svg).not.toContain('id="clip-path-dot-color"');
+  });
+});

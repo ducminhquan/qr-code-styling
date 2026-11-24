@@ -76,9 +76,9 @@ export function crc16(text: string): string {
 export const toPlainASCII = (text: string): string =>
   text
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "D")
     .replace(/[^\x20-\x7e]/g, "")
     .replace(/\s+/g, " ")
     .trim();
