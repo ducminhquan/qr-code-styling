@@ -49,6 +49,15 @@ describe.skipIf(!built)("Package entry points", () => {
     expect(typeof sandbox.QRCodeStyling).toBe("function");
   });
 
+  it("the <script> bundle still runs on a page without a UTF-8 charset", () => {
+    // Decoded as windows-1252, like a browser does without <meta charset="utf-8">: no regex may hold raw non-ASCII.
+    const sandbox = { window: {}, self: {} };
+    sandbox.window = sandbox;
+    const source = new TextDecoder("windows-1252").decode(fs.readFileSync(path.join(lib, "qr-code-styling.js")));
+    vm.runInNewContext(source, sandbox);
+    expect(typeof sandbox.QRCodeStyling).toBe("function");
+  });
+
   it("package.json exports map keeps deep lib/ imports working", () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
     expect(pkg.main).toBe("lib/qr-code-styling.js");

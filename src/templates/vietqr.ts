@@ -70,7 +70,7 @@ export const formatVND = (amount: number | string): string =>
   `${String(amount)
     .replace(/[\s.,]/g, "")
     .replace(/^0+(?=\d)/, "")
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ".")} đ`;
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".")} \u0111`;
 
 const binOf = (bank: string): string => {
   const key = String(bank || "")
@@ -113,7 +113,7 @@ export function vietQRTemplate(card: VietQRCardOptions): Partial<Options> {
   if (card.layout === "plain") return { ...style, margin: Math.round(width / 20) };
 
   const unit = width;
-  const title = card.title === undefined ? "Quét mã để thanh toán" : card.title;
+  const title = card.title === undefined ? "Qu\u00e9t m\u00e3 \u0111\u1ec3 thanh to\u00e1n" : card.title;
   const bankName = card.bankName || vietQRBankNames[binOf(card.bank)] || binOf(card.bank);
   const details: LabelLineOptions[] = [];
   if (card.amount !== undefined && card.amount !== null && card.amount !== "") {
@@ -128,7 +128,7 @@ export function vietQRTemplate(card: VietQRCardOptions): Partial<Options> {
     });
   }
   details.push({
-    text: `${bankName} · ${String(card.account).replace(/\s/g, "")}`,
+    text: `${bankName} \u00b7 ${String(card.account).replace(/\s/g, "")}`,
     fontSize: Math.round(unit * 0.038),
     fontWeight: 400,
     color: "#374151"
