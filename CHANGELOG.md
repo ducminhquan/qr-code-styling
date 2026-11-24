@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.0
+
+Server rendering for the React and Vue components. Existing options draw exactly the same picture.
+
+### Added
+- React and Vue components render the code into the server HTML (Next.js, Remix, Nuxt, Vue SSR), so it shows
+  before JavaScript runs, and hydrate without warnings. Vue draws every code on the server; React draws plain
+  codes by itself and takes a new `svg` prop for codes with a logo, art, a frame or a label.
+- `getSVGString()`: the SVG markup as a string without the XML declaration, in the browser and on Node.
+- `npm run size` and a CI step that fail when a bundle grows past its gzip budget (main bundle: 40 KB).
+
 ## 2.2.2
 
 Bug fixes. A code that drew correctly before draws exactly the same picture and markup.

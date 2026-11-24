@@ -133,6 +133,26 @@ Both redraw only when the options really change: a new but equal object does not
 `QRCodeStyling` instance (with an `onUpdate` prop called after each draw); the Vue ref exposes `qrCode`,
 `download`, `share` and `getRawData`, and the component emits `update`.
 
+**Server rendering.** With Next.js, Remix, Nuxt or plain Vue SSR the code is already in the server HTML, so it
+shows before any JavaScript runs; the browser then swaps in the live code without hydration warnings.
+
+- Vue draws every code on the server, logo, frame and label included.
+- React renders synchronously, so it puts plain codes (dots, corners, colors, gradients, shapes) in the HTML by
+  itself. For a code with a logo, art, a frame or a label, make the markup in a server component or loader and
+  pass it as `svg`:
+
+```jsx
+// Next.js app router: a server component
+import QRCodeStyling from "qr-code-styling-node";
+import { QRCode } from "qr-code-styling-node/react";
+
+export default async function Poster() {
+  const options = { data: "https://example.com", image: "https://example.com/logo.png" };
+  const svg = await new QRCodeStyling({ ...options, type: "svg" }).getSVGString();
+  return <QRCode options={options} svg={svg} />;
+}
+```
+
 ### On Node.js
 
 SVG works with no extra packages. `getRawData` returns a `Buffer` on Node.
@@ -683,6 +703,7 @@ Method                                         |Returns                         
 `append(container)`                            |`void`                                        |Puts the canvas or SVG into a DOM element
 `update(options)`                              |`void`                                        |Redraws with changed options (merged into the current ones)
 `getRawData(extension = 'png')`                |`Promise<Blob \| Buffer>`                     |`'png'` `'jpeg'` `'webp'` `'svg'`. Blob in the browser, Buffer on Node
+`getSVGString()`                               |`Promise<string>`                             |The SVG markup without the XML declaration, ready to inline in HTML
 `download({ name = 'qr', extension = 'png' })` |`Promise<void>`                               |Saves the file in the browser
 `share({ name, extension, title, text })`      |`Promise<'shared' \| 'cancelled' \| 'downloaded'>`|Share sheet on phones, download elsewhere
 `verify({ decoder, adjust })`                  |`Promise<{ readable, decoded, contrast, attempts }>`|Decodes the result, see [checking](#checking-that-a-code-scans)
@@ -719,6 +740,7 @@ npm install
 npm test          # unit, compatibility and scan tests (vitest)
 npm run lint      # eslint + prettier
 npm run build     # lib/: UMD, CommonJS, ES module, React and Vue wrappers, types
+npm run size      # gzip size of each bundle against its budget (also run in CI)
 npm run playground # builds the playground into site/
 npm start         # dev server
 npm run commit    # write a commit message step by step (commitizen)
@@ -726,6 +748,9 @@ npm run commit    # write a commit message step by step (commitizen)
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat(vietqr): ...`,
 `fix: ...`, `docs: ...`). `npm install` sets up a git hook that checks each message with commitlint.
+
+Keeping the package light is one of its reasons to exist: `scripts/check-size.mjs` holds a gzip budget per
+bundle and CI fails when a change goes over it. Raise a budget only on purpose, in the commit that needs it.
 
 `npm run art-examples`, `blend-examples`, `circle-examples`, `dot-examples`, `retail-examples`, `style-examples` and `template-examples` regenerate the
 images in this README.

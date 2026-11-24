@@ -184,6 +184,32 @@ export default class QRCodeStyling {
     return `<?xml version="1.0" standalone="no"?>\r\n${serializer.serializeToString(svg.getElement())}`;
   }
 
+  /**
+   * The code as an SVG string without the XML declaration, in the browser and on Node alike. For server
+   * rendering, or for inlining the code in HTML.
+   */
+  async getSVGString(): Promise<string> {
+    return QRCodeStyling._withoutXMLDeclaration((await this._getSVGString()).svgString);
+  }
+
+  static _withoutXMLDeclaration(svgString: string): string {
+    return svgString.replace(/^<\?xml[^>]*\?>\s*/, "");
+  }
+
+  /**
+   * The SVG string when the code can be drawn without waiting (no logo, art, frame, label or plugins), else
+   * "". Used by the framework wrappers to put the code in server-rendered HTML.
+   */
+  _getSVGStringSync(): string {
+    if (!this._qr || this._options.plugins?.length) return "";
+    const svg = new QRSVG({ ...this._options, type: drawTypes.svg });
+    svg.drawQR(this._qr).catch(() => undefined);
+    if (!svg._codeDrawn) return "";
+    const element = svg.getElement();
+    if (this._options.idPrefix) prefixSvgIds(element, this._options.idPrefix);
+    return QRCodeStyling._withoutXMLDeclaration(QRCodeStyling._serializeSVG(svg));
+  }
+
   async _getSVGString(): Promise<{ svgString: string; svg: QRSVG }> {
     const svg = (await this._getQRStylingElement("svg")) as QRSVG;
     return { svgString: QRCodeStyling._serializeSVG(svg), svg };

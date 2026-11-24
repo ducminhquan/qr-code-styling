@@ -54,6 +54,11 @@ export default class QRSVG {
   _qr?: QRCode;
   _image?: HTMLImageElement;
   _imageUri?: string;
+  /**
+   * Set when the plain code (no frame or label) is fully drawn. Without a logo, art or frame this happens
+   * synchronously inside drawQR(), which lets the React wrapper render the SVG during server rendering.
+   */
+  _codeDrawn = false;
   /** True when no browser DOM or jsdom is available and the built-in virtual DOM is used. */
   _virtual = false;
   /** Image used to paint the dots instead of their color (QR art "colorize"). */
@@ -178,6 +183,7 @@ export default class QRSVG {
   }
 
   async drawQR(qr: QRCode): Promise<void> {
+    this._codeDrawn = false;
     await this._drawCode(qr);
     if (this._options.plugins?.length) {
       await runAfterDraw(this._options, {
@@ -277,6 +283,7 @@ export default class QRSVG {
     if (this._options.image && this._image) {
       this.drawImage({ width: drawImageSize.width, height: drawImageSize.height, count, dotSize });
     }
+    this._codeDrawn = true;
   }
 
   /** plain: fill the whole area, ignoring the shape (the panel behind a framed or labelled code). */

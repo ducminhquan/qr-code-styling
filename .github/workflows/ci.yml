@@ -22,6 +22,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+      - name: Check bundle sizes
+        run: npm run size
       - run: npm test
       - name: Check the package can be packed
         run: npm pack --dry-run
