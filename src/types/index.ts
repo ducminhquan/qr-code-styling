@@ -261,6 +261,12 @@ export type Options = {
    * node-canvas: the QR code is drawn as SVG and rasterized by resvg.
    */
   resvg?: ResvgConstructor;
+  /**
+   * Text put in front of every id inside the SVG (clip paths, gradients), for example "menu-". Use it when
+   * you inline several SVG strings from getRawData("svg") in one page. Codes shown with append() get
+   * unique ids on their own when they would clash.
+   */
+  idPrefix?: string;
   /** Blend a picture into the QR code. Needs a canvas (browser, or nodeCanvas on Node). */
   art?: ArtOptions;
   /** A border around the code. The code shrinks to fit inside width x height. */

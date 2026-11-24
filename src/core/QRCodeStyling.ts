@@ -1,3 +1,4 @@
+import { avoidIdClashes, prefixSvgIds } from "../tools/svgIds";
 import getMode from "../tools/getMode";
 import mergeDeep from "../tools/merge";
 import downloadURI from "../tools/downloadURI";
@@ -60,7 +61,7 @@ export default class QRCodeStyling {
         promise = this._svgDrawingPromise;
       } else {
         svg = new QRSVG(this._options);
-        promise = svg.drawQR(this._qr);
+        promise = this._drawSVG(svg, this._qr);
       }
 
       await promise;
@@ -114,12 +115,18 @@ export default class QRCodeStyling {
       this._svg = undefined;
     } else {
       this._svg = new QRSVG(this._options);
-      this._svgDrawingPromise = this._svg.drawQR(this._qr);
+      this._svgDrawingPromise = this._drawSVG(this._svg, this._qr);
       this._canvasDrawingPromise = undefined;
       this._canvas = undefined;
     }
 
     this.append(this._container);
+  }
+
+  /** Draws the SVG, then applies options.idPrefix to its ids. */
+  async _drawSVG(svg: QRSVG, qr: QRCode): Promise<void> {
+    await svg.drawQR(qr);
+    if (this._options.idPrefix) prefixSvgIds(svg.getElement(), this._options.idPrefix);
   }
 
   /** Encodes options.data into a QR matrix, without drawing anything. */
@@ -160,6 +167,12 @@ export default class QRCodeStyling {
     } else {
       if (this._svg) {
         container.appendChild(this._svg.getElement());
+        // Several codes inlined in one page must not share clip path and gradient ids.
+        const svg = this._svg;
+        this._svgDrawingPromise?.then(
+          () => avoidIdClashes(svg.getElement()),
+          () => undefined
+        );
       }
     }
 
