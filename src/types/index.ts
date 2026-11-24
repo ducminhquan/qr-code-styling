@@ -267,6 +267,12 @@ export type Options = {
    * unique ids on their own when they would clash.
    */
   idPrefix?: string;
+  /**
+   * Accessible name read by screen readers, e.g. "Pay 150.000 d to Long Chau". The SVG gets role="img",
+   * aria-label and a <title> (also shown as a tooltip); a canvas in the browser gets role="img" and aria-label.
+   * Without it the output is unchanged.
+   */
+  title?: string;
   /** Blend a picture into the QR code. Needs a canvas (browser, or nodeCanvas on Node). */
   art?: ArtOptions;
   /** A border around the code. The code shrinks to fit inside width x height. */

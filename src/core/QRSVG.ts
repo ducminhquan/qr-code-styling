@@ -46,7 +46,7 @@ export default class QRSVG {
   _canvas?: Canvas;
   _window: Window;
   _element: SVGElement;
-  _defs: SVGElement;
+  _defs!: SVGElement;
   _dotsClipPath?: SVGElement;
   _cornersSquareClipPath?: SVGElement;
   _cornersDotClipPath?: SVGElement;
@@ -82,8 +82,12 @@ export default class QRSVG {
     this._element = this._window.document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this._element.setAttribute("width", String(options.width));
     this._element.setAttribute("height", String(options.height));
-    this._defs = this._window.document.createElementNS("http://www.w3.org/2000/svg", "defs");
-    this._element.appendChild(this._defs);
+    if (options.title) {
+      this._element.setAttribute("role", "img");
+      this._element.setAttribute("aria-label", options.title);
+    }
+    this._options = options;
+    this._appendTitleAndDefs();
 
     if (options.imageOptions.saveAsBlob && !this._virtual) {
       if (options.nodeCanvas?.createCanvas) {
@@ -115,6 +119,16 @@ export default class QRSVG {
     const oldElement = this._element;
     this._element = oldElement.cloneNode(false) as SVGElement;
     oldElement?.parentNode?.replaceChild(this._element, oldElement);
+    this._appendTitleAndDefs();
+  }
+
+  /** <title> must be the first child of the svg for screen readers and tooltips; <defs> follows. */
+  _appendTitleAndDefs(): void {
+    if (this._options.title) {
+      const title = this._window.document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = this._options.title;
+      this._element.appendChild(title);
+    }
     this._defs = this._window.document.createElementNS("http://www.w3.org/2000/svg", "defs");
     this._element.appendChild(this._defs);
   }

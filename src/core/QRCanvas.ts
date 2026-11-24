@@ -56,6 +56,12 @@ export default class QRCanvas {
     this._canvas.width = options.width;
     this._canvas.height = options.height;
     this._options = options;
+    // node-canvas has no attributes; only a browser canvas can carry an accessible name.
+    const element = this._canvas as unknown as Partial<HTMLCanvasElement>;
+    if (options.title && typeof element.setAttribute === "function") {
+      element.setAttribute("role", "img");
+      element.setAttribute("aria-label", options.title);
+    }
   }
 
   get context(): CanvasRenderingContext2D | null {
