@@ -161,16 +161,15 @@ export default class QRCanvas {
 
     this._qr = qr;
 
-    if (this._options.image) {
-      await this.loadImage();
-      if (!this._image) return;
+    const logo = this._options.image ? await this._tryLoadImage() : undefined;
+    if (logo) {
       const { imageOptions, qrOptions } = this._options;
       const coverLevel = imageOptions.imageSize * errorCorrectionPercents[qrOptions.errorCorrectionLevel];
       const maxHiddenDots = Math.floor(coverLevel * count * count);
 
       drawImageSize = calculateImageSize({
-        originalWidth: this._image.width,
-        originalHeight: this._image.height,
+        originalWidth: logo.width,
+        originalHeight: logo.height,
         maxHiddenDots,
         maxHiddenAxisDots: count - 14,
         dotSize
@@ -228,7 +227,7 @@ export default class QRCanvas {
     this.drawCorners();
     this._finderColors = undefined;
 
-    if (this._options.image) {
+    if (this._options.image && this._image) {
       this.drawImage({ width: drawImageSize.width, height: drawImageSize.height, count, dotSize });
     }
   }
@@ -514,6 +513,12 @@ export default class QRCanvas {
     });
   }
 
+  /** Loads the logo and says whether there is one to draw (a browser logo that fails to load is left out). */
+  async _tryLoadImage(): Promise<HTMLImageElement | undefined> {
+    await this.loadImage();
+    return this._image;
+  }
+
   loadImage(): Promise<void> {
     return new Promise((resolve, reject) => {
       const options = this._options;
@@ -544,6 +549,11 @@ export default class QRCanvas {
 
         this._image = image;
         image.onload = (): void => {
+          resolve();
+        };
+        image.onerror = (): void => {
+          console.warn("qr-code-styling: the logo could not be loaded and was left out:", options.image);
+          this._image = undefined;
           resolve();
         };
         image.src = options.image;
